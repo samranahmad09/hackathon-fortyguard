@@ -1,0 +1,13 @@
+#!/bin/sh
+# Block commits containing an API-key-shaped string (32 hex chars) or a .env file.
+if git diff --cached --name-only | grep -qx '.env'; then
+  echo "BLOCKED: .env is staged. Never commit it." >&2
+  exit 1
+fi
+if git diff --cached -U0 | grep -nE '^\+.*[0-9a-f]{32}' >/dev/null; then
+  echo "BLOCKED: staged changes contain a 32-hex string that looks like an API key." >&2
+  echo "If this is a false positive, commit with --no-verify after checking." >&2
+  git diff --cached -U0 | grep -nE '^\+.*[0-9a-f]{32}' | head -5 >&2
+  exit 1
+fi
+exit 0

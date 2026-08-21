@@ -23,9 +23,23 @@ Phoenix on a single night, hours spent above 28 °C between midnight and dawn:
 | Hottest block | 6.23 |
 | **Spread** | **3.69** |
 
-For comparison, the 16:00 afternoon peak spreads only 1.57 °C across the same area. Two blocks
-a few hundred metres apart can look identical on an afternoon map while one gets a night of
-relief and the other gets none.
+For comparison, the 16:00 afternoon peak spreads only 1.57 °C across the same area.
+
+The signal survives aggregation to administrative units, which is what makes it actionable.
+Measured over 64,321 tiles at 60 m granularity, then aggregated:
+
+| Geography | Units | Spread of unit means | Retained | ICC |
+|---|---|---|---|---|
+| Tiles (60 m) | 64,321 | 3.69 h | — | — |
+| **Census tracts** | 134 | **3.20 h** | **86%** | **0.86** |
+| Block groups | 333 | 3.28 h | 89% | 0.90 |
+
+An ICC of 0.86 means 86% of the variance is *between* tracts rather than within them — median
+within-tract spread is 0.06 h. Tracts are internally coherent on this metric, because overnight
+heat retention is driven by neighbourhood-scale built form and tract boundaries tend to follow it.
+
+Two *touching* tracts in this AOI differ by 2.26 h: 5.20 h versus 2.93 h of the six-hour night
+above 28 °C. One gets three hours of relief; the other gets forty-eight minutes.
 
 ## What it does
 

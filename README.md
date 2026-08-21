@@ -28,18 +28,27 @@ For comparison, the 16:00 afternoon peak spreads only 1.57 °C across the same a
 The signal survives aggregation to administrative units, which is what makes it actionable.
 Measured over 64,321 tiles at 60 m granularity, then aggregated:
 
+Measured over 47,944 tiles at 100 m granularity, across an AOI wide enough to fully contain
+every tract in the study set (21.5 × 22.5 km, all 134 tracts at ≥88.7% coverage):
+
 | Geography | Units | Spread of unit means | Retained | ICC |
 |---|---|---|---|---|
-| Tiles (60 m) | 64,321 | 3.69 h | — | — |
-| **Census tracts** | 134 | **3.20 h** | **86%** | **0.86** |
-| Block groups | 333 | 3.28 h | 89% | 0.90 |
+| Tiles (100 m) | 47,944 | 3.70 h | — | — |
+| **Census tracts** | 134 | **3.18 h** | **86%** | **0.855** |
+| Block groups | 333 | 3.28 h | 89% | 0.901 |
 
-An ICC of 0.86 means 86% of the variance is *between* tracts rather than within them — median
-within-tract spread is 0.06 h. Tracts are internally coherent on this metric, because overnight
+An ICC of 0.855 means 86% of the variance is *between* tracts rather than within them — median
+within-tract spread is 0.071 h. Tracts are internally coherent on this metric, because overnight
 heat retention is driven by neighbourhood-scale built form and tract boundaries tend to follow it.
 
-Two *touching* tracts in this AOI differ by 2.26 h: 5.20 h versus 2.93 h of the six-hour night
-above 28 °C. One gets three hours of relief; the other gets forty-eight minutes.
+An earlier pass used a narrower AOI that clipped 38 of the 134 tracts, the worst covering only
+1.2% of its own area. Widening to full coverage moved the tract spread from 3.20 h to 3.18 h and
+the ICC from 0.857 to 0.855 — the conclusion is not sensitive to it, because high ICC means even
+a clipped sample comes from a fairly uniform tract. Clipping added noise, not bias.
+
+Tract **1062** is a cool island at 2.89 h, and every tract it touches runs 1.7–2.0 h hotter
+overnight — 1065.01 at 4.84 h, 1052 at 4.74 h, 1066 at 4.64 h, 1063 at 4.58 h. Three hours of
+relief on one side of a boundary, a little over one hour on the other.
 
 ## What it does
 

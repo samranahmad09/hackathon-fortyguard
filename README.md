@@ -67,6 +67,14 @@ cp .env.example .env    # then add your key
 ```
 
 Generate a key from the [Temperature Dashboard](https://dashboard.fortyguard.com) under Profile.
+Each team member should generate their own — separate credit pools, no waiting on each other.
+
+After cloning, enable the safety hook (`core.hooksPath` is local config and does not travel with
+a clone, so every teammate must run this once):
+
+```bash
+git config core.hooksPath .githooks
+```
 
 **The key never leaves the server.** `.env` is gitignored and a pre-commit hook blocks commits
 containing key-shaped strings. This repo is public and the API key must stay server-side.

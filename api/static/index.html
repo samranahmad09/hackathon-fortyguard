@@ -149,21 +149,34 @@ renderPanel();
 // Gate on style parse, not on first paint. `map.on('load')` waits for a render,
 // which never happens if the tab is backgrounded or throttled -- the data would
 // then silently never appear. `styledata` fires as soon as the style is usable.
-async function boot() {
-  if (window.__ready) return;
+//
+// Both hooks can fire, so boot must be single-flight. A plain `if (ready) return`
+// guard does not work: the flag is only set *after* an await, so a second call
+// slips past it, re-runs addSource('tracts'), and throws "source already exists"
+// -- which surfaced as a bogus "could not load" banner over a perfectly good map.
+// Latching the promise synchronously is what actually makes it idempotent.
+let bootPromise = null;
+
+async function doBoot() {
   try {
     window.__tracts = await renderTracts();
   } catch (e) {
-    warn('Could not load /api/tracts.');
+    console.error('renderTracts failed:', e);
+    warn('Tract data unavailable: ' + (e && e.message ? e.message : e));
     return;
   }
   tryBasemap();
   window.__ready = true;
 }
 
+function boot() {
+  if (!bootPromise) bootPromise = doBoot();
+  return bootPromise;
+}
+
 if (map.isStyleLoaded()) boot();
 else map.once('styledata', boot);
-map.on('load', boot);            // harmless belt-and-braces; boot() is idempotent
+map.on('load', boot);
 </script>
 </body>
 </html>

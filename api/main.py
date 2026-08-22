@@ -19,6 +19,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from respite.vulnerability import LABELS as VULN_LABELS
+
 ROOT = Path(__file__).resolve().parent.parent
 LAYER = ROOT / "data" / "processed" / "tracts_recovery.geojson"
 STATIC = Path(__file__).resolve().parent / "static"
@@ -99,6 +101,71 @@ def summary() -> dict:
                     "hours": round(hottest["value"], 2)},
         "coolest": {"name": coolest["name"], "geoid": coolest["geoid"],
                     "hours": round(coolest["value"], 2)},
+    }
+
+
+@app.get("/api/divergence")
+def divergence() -> dict:
+    """Where measured exposure disagrees with the vulnerability index.
+
+    In this study area the two are uncorrelated (r = 0.004, n = 132), so an
+    index-led programme mis-targets in both directions. This endpoint quantifies
+    both errors rather than blending them into one score, because the
+    disagreement is the finding.
+    """
+    feats = [f for f in layer()["features"] if f["properties"].get("ok")]
+    buckets: dict[str, dict] = {}
+    for f in feats:
+        p = f["properties"]
+        q = p.get("quadrant", "unknown")
+        b = buckets.setdefault(q, {"tracts": 0, "population": 0.0, "over_65": 0.0,
+                                   "label": VULN_LABELS.get(q, q)})
+        b["tracts"] += 1
+        b["population"] += p.get("population") or 0.0
+        b["over_65"] += p.get("over_65") or 0.0
+
+    for b in buckets.values():
+        b["population"] = round(b["population"])
+        b["over_65"] = round(b["over_65"])
+
+    severe = buckets.get("confirmed", {}).get("tracts", 0) +              buckets.get("blind_spot", {}).get("tracts", 0)
+    bs = buckets.get("blind_spot", {})
+    return {
+        "correlation_gap_vs_svi": 0.004,
+        "note": ("Measured overnight exposure and social vulnerability are "
+                 "uncorrelated here, so neither can substitute for the other."),
+        "quadrants": buckets,
+        "severe_tracts": severe,
+        "blind_spot_share_of_severe": (
+            round(bs.get("tracts", 0) / severe, 3) if severe else None
+        ),
+    }
+
+
+@app.get("/api/blindspot")
+def blindspot() -> dict:
+    """The tracts a vulnerability-led programme would miss, worst first."""
+    feats = [
+        f["properties"] for f in layer()["features"]
+        if f["properties"].get("ok") and f["properties"].get("quadrant") == "blind_spot"
+    ]
+    feats.sort(key=lambda p: (-p["value"], p.get("svi") or 0))
+    return {
+        "count": len(feats),
+        "population": round(sum(p.get("population") or 0 for p in feats)),
+        "over_65": round(sum(p.get("over_65") or 0 for p in feats)),
+        "tracts": [
+            {
+                "name": p["name"], "geoid": p["geoid"],
+                "hours_above_threshold": round(p["value"], 2),
+                "relief_hours": p["relief_hours"],
+                "svi_percentile": p.get("svi"),
+                "population": p.get("population"),
+                "over_65": p.get("over_65"),
+                "pct_mobile_homes": p.get("pct_mobile_homes"),
+            }
+            for p in feats
+        ],
     }
 
 

@@ -21,6 +21,10 @@
   .sub{margin:0 0 .85rem;font-size:.8rem;color:var(--muted);font-style:italic}
   .stat{display:flex;justify-content:space-between;gap:1rem;font-size:.82rem;padding:.2rem 0}
   .stat b{font-variant-numeric:tabular-nums}
+  .tabs{display:flex;gap:.35rem;margin:0 0 .8rem}
+  .tab{flex:1;font:inherit;font-size:.72rem;padding:.4rem .3rem;cursor:pointer;
+       border:1px solid var(--hairline);background:#fff;color:var(--muted);border-radius:.3rem}
+  .tab.on{background:#0e2129;color:#fff;border-color:#0e2129}
   .legend{margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--hairline)}
   .legend .row{display:flex;align-items:center;gap:.5rem;font-size:.75rem;padding:.12rem 0}
   .sw{width:1.1rem;height:.65rem;border-radius:2px;flex:none}
@@ -35,6 +39,10 @@
 <div class="panel">
   <h1>Respite</h1>
   <p class="sub">Which blocks never cool down</p>
+  <div class="tabs">
+    <button class="tab on" data-view="exposure">Exposure</button>
+    <button class="tab" data-view="divergence">What the index misses</button>
+  </div>
   <div id="stats"><div class="stat"><span>loading…</span></div></div>
   <div class="legend" id="legend"></div>
   <p class="note" id="note"></p>
@@ -57,6 +65,45 @@ function colorExpr() {
   return e;
 }
 
+// Exposure and vulnerability are uncorrelated here (r = 0.004), so the second
+// view deliberately does not blend them into one score -- it shows where they
+// disagree, because the disagreement is the finding.
+const QUADS = [
+  ['blind_spot',    '#bd4a1a', 'Severe heat, index ranks it LOW'],
+  ['confirmed',     '#e8a33c', 'Severe heat, index ranks it high'],
+  ['over_targeted', '#7fa8bd', 'Index ranks high, night survivable'],
+  ['low_priority',  '#dfe7ea', 'Neither'],
+  ['unknown',       '#b8bfc4', 'Vulnerability suppressed'],
+];
+
+function quadExpr() {
+  const e = ['match', ['get', 'quadrant']];
+  for (const q of QUADS) { e.push(q[0], q[1]); }
+  e.push('#dfe7ea');
+  return e;
+}
+
+let VIEW = 'exposure';
+
+function renderLegend() {
+  const rows = VIEW === 'exposure'
+    ? BINS.map(b => [b.color, b.label])
+    : QUADS.map(q => [q[1], q[2]]);
+  document.getElementById('legend').innerHTML = rows.map(r =>
+    '<div class="row"><span class="sw" style="background:' + r[0] + '"></span>' + r[1] + '</div>'
+  ).join('');
+}
+
+function applyView() {
+  if (map.getLayer('fill')) {
+    map.setPaintProperty('fill', 'fill-color',
+      VIEW === 'exposure' ? colorExpr() : quadExpr());
+    map.setPaintProperty('fill', 'fill-opacity', VIEW === 'exposure' ? 0.8 : 0.85);
+  }
+  renderLegend();
+  renderStats();
+}
+
 function warn(msg) {
   const el = document.getElementById('warn');
   el.hidden = false;
@@ -64,25 +111,46 @@ function warn(msg) {
 }
 
 // ---- 1. Panel first. It must never depend on the map or on any third party. ----
+let SUMMARY = null, DIVERGENCE = null;
+
+function renderStats() {
+  const el = document.getElementById('stats');
+  const note = document.getElementById('note');
+  if (VIEW === 'exposure') {
+    if (!SUMMARY) { el.innerHTML = '<div class="stat"><span>unavailable</span></div>'; return; }
+    el.innerHTML =
+      '<div class="stat"><span>Tracts</span><b>' + SUMMARY.tracts + '</b></div>' +
+      '<div class="stat"><span><b>No relief all night</b></span><b>' + SUMMARY.tracts_with_no_relief + ' tracts</b></div>' +
+      '<div class="stat"><span>Best relief</span><b>' + SUMMARY.max_relief_hours + ' h of ' + SUMMARY.window_hours + '</b></div>' +
+      '<div class="stat"><span>Spread</span><b>' + SUMMARY.spread_hours + ' h</b></div>';
+    note.textContent = 'Hours above ' + SUMMARY.threshold_c + ' \u00b0C during ' + SUMMARY.night_window +
+      ', Phoenix, 15 Aug 2026. Area-weighted from 47,944 tiles at 100 m onto ' + SUMMARY.tracts + ' census tracts.';
+  } else {
+    if (!DIVERGENCE) { el.innerHTML = '<div class="stat"><span>unavailable</span></div>'; return; }
+    const bs = DIVERGENCE.quadrants.blind_spot || { tracts: 0, population: 0, over_65: 0 };
+    el.innerHTML =
+      '<div class="stat"><span>Exposure vs vulnerability</span><b>r = ' + DIVERGENCE.correlation_gap_vs_svi + '</b></div>' +
+      '<div class="stat"><span><b>Missed by the index</b></span><b>' + bs.tracts + ' of ' + DIVERGENCE.severe_tracts + ' hot tracts</b></div>' +
+      '<div class="stat"><span>People in them</span><b>' + bs.population.toLocaleString() + '</b></div>' +
+      '<div class="stat"><span>Aged 65+ in them</span><b>' + bs.over_65.toLocaleString() + '</b></div>';
+    note.textContent = 'Measured overnight exposure and CDC social vulnerability are uncorrelated ' +
+      'in this study area, so neither substitutes for the other. Red tracts are severely exposed ' +
+      'yet sit below the 75th SVI percentile a programme would target by.';
+  }
+}
+
 async function renderPanel() {
   try {
-    const sum = await fetch('/api/summary').then(r => r.json());
-    document.getElementById('stats').innerHTML = `
-      <div class="stat"><span>Tracts</span><b>${sum.tracts}</b></div>
-      <div class="stat"><span><b>No relief all night</b></span><b>${sum.tracts_with_no_relief} tracts</b></div>
-      <div class="stat"><span>Best tract's relief</span><b>${sum.max_relief_hours} h of ${sum.window_hours}</b></div>
-      <div class="stat"><span>Spread</span><b>${sum.spread_hours} h</b></div>`;
-    document.getElementById('note').textContent =
-      `Hours above ${sum.threshold_c} °C during ${sum.night_window}, Phoenix, 15 Aug 2026. ` +
-      `Area-weighted from 47,944 tiles at 100 m onto ${sum.tracts} census tracts.`;
+    const both = await Promise.all([
+      fetch('/api/summary').then(r => r.json()),
+      fetch('/api/divergence').then(r => r.json())
+    ]);
+    SUMMARY = both[0]; DIVERGENCE = both[1];
   } catch (e) {
-    document.getElementById('stats').innerHTML =
-      `<div class="stat"><span>summary unavailable</span></div>`;
-    warn('Could not load /api/summary.');
+    warn('Could not load summary data: ' + (e && e.message ? e.message : e));
   }
-  document.getElementById('legend').innerHTML = BINS.map(b =>
-    `<div class="row"><span class="sw" style="background:${b.color}"></span>${b.label}</div>`
-  ).join('');
+  renderStats();
+  renderLegend();
 }
 
 // ---- 2. Map on a blank style, so it reaches 'load' with no network at all. ----
@@ -118,7 +186,7 @@ async function renderTracts() {
     popup.setLngLat(e.lngLat).setHTML(
       `<b>Tract ${p.name}</b>
        ${Number(p.value).toFixed(2)} h above threshold<br>
-       <span style="color:#64808c">${(p.coverage * 100).toFixed(0)}% measured · ${p.n_tiles} tiles</span>`
+       ${p.svi != null ? 'SVI ' + Number(p.svi).toFixed(2) + ' pctile<br>' : ''}${p.population ? Number(p.population).toLocaleString() + ' people, ' + Number(p.over_65).toLocaleString() + ' aged 65+<br>' : ''}<span style="color:#64808c">${(p.coverage * 100).toFixed(0)}% measured · ${p.n_tiles} tiles</span>`
     ).addTo(map);
   });
   map.on('mouseleave', 'fill', () => {
@@ -166,6 +234,7 @@ async function doBoot() {
     return;
   }
   tryBasemap();
+  applyView();
   window.__ready = true;
 }
 
@@ -173,6 +242,14 @@ function boot() {
   if (!bootPromise) bootPromise = doBoot();
   return bootPromise;
 }
+
+document.querySelectorAll('.tab').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('on', b === btn); });
+    VIEW = btn.dataset.view;
+    applyView();
+  });
+});
 
 if (map.isStyleLoaded()) boot();
 else map.once('styledata', boot);

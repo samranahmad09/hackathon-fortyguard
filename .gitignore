@@ -246,3 +246,14 @@ data/street_view/*
 !data/env_params/
 data/env_params/*
 !data/env_params/env_params_parcel_*.json
+
+# Respite: raw FortyGuard responses are large and reproducible from scripts/.
+# The processed layer under data/processed IS committed, so the live URL never
+# needs to call the API.
+data/raw/
+
+# ...but the layer the live site serves MUST be committed, or the deploy has no
+# data. `data/*` above would otherwise swallow it.
+!data/processed/
+!data/processed/*.geojson
+!data/tracts.geojson

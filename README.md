@@ -19,15 +19,13 @@ Phoenix on a single night, hours spent above 28 °C between midnight and dawn:
 
 | | Hours above 28 °C (of a 6-hour night) |
 |---|---|
-| Coolest block | 2.55 |
+| Coolest block | 2.53 |
 | Hottest block | 6.23 |
-| **Spread** | **3.69** |
+| **Spread** | **3.70** |
 
 For comparison, the 16:00 afternoon peak spreads only 1.57 °C across the same area.
 
 The signal survives aggregation to administrative units, which is what makes it actionable.
-Measured over 64,321 tiles at 60 m granularity, then aggregated:
-
 Measured over 47,944 tiles at 100 m granularity, across an AOI wide enough to fully contain
 every tract in the study set (21.5 × 22.5 km, all 134 tracts at ≥88.7% coverage):
 

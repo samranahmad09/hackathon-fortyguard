@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Respite — Phoenix overnight recovery gap</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e2129; --muted:#64808c; --hairline:#cfdde3; --panel:#f8fbfc; --ground:#e8eef1;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+  #map{position:absolute;inset:0;background:var(--ground)}
+  .panel{
+    position:absolute;top:1rem;left:1rem;z-index:2;width:min(21rem,calc(100vw - 2rem));
+    background:var(--panel);border:1px solid var(--hairline);border-radius:.5rem;
+    padding:1rem 1.15rem;box-shadow:0 .5rem 1.5rem rgba(14,33,41,.12);
+  }
+  h1{margin:0 0 .15rem;font-size:1.05rem;letter-spacing:-.01em}
+  .sub{margin:0 0 .85rem;font-size:.8rem;color:var(--muted);font-style:italic}
+  .stat{display:flex;justify-content:space-between;gap:1rem;font-size:.82rem;padding:.2rem 0}
+  .stat b{font-variant-numeric:tabular-nums}
+  .legend{margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--hairline)}
+  .legend .row{display:flex;align-items:center;gap:.5rem;font-size:.75rem;padding:.12rem 0}
+  .sw{width:1.1rem;height:.65rem;border-radius:2px;flex:none}
+  .note{margin-top:.75rem;font-size:.7rem;color:var(--muted);line-height:1.5}
+  .warn{margin-top:.5rem;font-size:.7rem;color:#bd4a1a}
+  .maplibregl-popup-content{font-size:.8rem;padding:.6rem .75rem;border-radius:.4rem}
+  .maplibregl-popup-content b{display:block;margin-bottom:.2rem}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <h1>Respite</h1>
+  <p class="sub">Which blocks never cool down</p>
+  <div id="stats"><div class="stat"><span>loading…</span></div></div>
+  <div class="legend" id="legend"></div>
+  <p class="note" id="note"></p>
+  <p class="warn" id="warn" hidden></p>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+const BINS = [
+  { max: 3.2, color: '#1a5b8a', label: 'under 3.2 h — real relief' },
+  { max: 4.0, color: '#4a9ec4', label: '3.2 – 4.0 h' },
+  { max: 4.7, color: '#f0d97d', label: '4.0 – 4.7 h' },
+  { max: 5.4, color: '#e08a3c', label: '4.7 – 5.4 h' },
+  { max: 99,  color: '#bd4a1a', label: 'over 5.4 h — almost no relief' },
+];
+
+function colorExpr() {
+  const e = ['step', ['get', 'value'], BINS[0].color];
+  for (let i = 0; i < BINS.length - 1; i++) e.push(BINS[i].max, BINS[i + 1].color);
+  return e;
+}
+
+function warn(msg) {
+  const el = document.getElementById('warn');
+  el.hidden = false;
+  el.textContent = msg;
+}
+
+// ---- 1. Panel first. It must never depend on the map or on any third party. ----
+async function renderPanel() {
+  try {
+    const sum = await fetch('/api/summary').then(r => r.json());
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><span>Tracts</span><b>${sum.tracts}</b></div>
+      <div class="stat"><span><b>No relief all night</b></span><b>${sum.tracts_with_no_relief} tracts</b></div>
+      <div class="stat"><span>Best tract's relief</span><b>${sum.max_relief_hours} h of ${sum.window_hours}</b></div>
+      <div class="stat"><span>Spread</span><b>${sum.spread_hours} h</b></div>`;
+    document.getElementById('note').textContent =
+      `Hours above ${sum.threshold_c} °C during ${sum.night_window}, Phoenix, 15 Aug 2026. ` +
+      `Area-weighted from 47,944 tiles at 100 m onto ${sum.tracts} census tracts.`;
+  } catch (e) {
+    document.getElementById('stats').innerHTML =
+      `<div class="stat"><span>summary unavailable</span></div>`;
+    warn('Could not load /api/summary.');
+  }
+  document.getElementById('legend').innerHTML = BINS.map(b =>
+    `<div class="row"><span class="sw" style="background:${b.color}"></span>${b.label}</div>`
+  ).join('');
+}
+
+// ---- 2. Map on a blank style, so it reaches 'load' with no network at all. ----
+const map = new maplibregl.Map({
+  container: 'map',
+  style: {
+    version: 8,
+    sources: {},
+    layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e8eef1' } }]
+  },
+  center: [-112.077, 33.494],
+  zoom: 10.4,
+  attributionControl: false
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+async function renderTracts() {
+  const gj = await fetch('/api/tracts').then(r => r.json());
+  map.addSource('tracts', { type: 'geojson', data: gj });
+  map.addLayer({
+    id: 'fill', type: 'fill', source: 'tracts',
+    paint: { 'fill-color': colorExpr(), 'fill-opacity': 0.8 }
+  });
+  map.addLayer({
+    id: 'line', type: 'line', source: 'tracts',
+    paint: { 'line-color': '#0e2129', 'line-width': 0.4, 'line-opacity': 0.45 }
+  });
+
+  const popup = new maplibregl.Popup({ closeButton: false, offset: 8 });
+  map.on('mousemove', 'fill', e => {
+    const p = e.features[0].properties;
+    map.getCanvas().style.cursor = 'pointer';
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>Tract ${p.name}</b>
+       ${Number(p.value).toFixed(2)} h above threshold<br>
+       <span style="color:#64808c">${(p.coverage * 100).toFixed(0)}% measured · ${p.n_tiles} tiles</span>`
+    ).addTo(map);
+  });
+  map.on('mouseleave', 'fill', () => {
+    map.getCanvas().style.cursor = '';
+    popup.remove();
+  });
+  return gj.features.length;
+}
+
+// ---- 3. Basemap is a best-effort enhancement, added underneath and allowed to fail. ----
+function tryBasemap() {
+  try {
+    map.addSource('osm', {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors'
+    });
+    map.addLayer({ id: 'osm', type: 'raster', source: 'osm',
+                   paint: { 'raster-opacity': 0.5 } }, 'fill');
+  } catch (e) {
+    warn('Basemap unavailable — tract data is unaffected.');
+  }
+}
+
+renderPanel();
+
+// Gate on style parse, not on first paint. `map.on('load')` waits for a render,
+// which never happens if the tab is backgrounded or throttled -- the data would
+// then silently never appear. `styledata` fires as soon as the style is usable.
+async function boot() {
+  if (window.__ready) return;
+  try {
+    window.__tracts = await renderTracts();
+  } catch (e) {
+    warn('Could not load /api/tracts.');
+    return;
+  }
+  tryBasemap();
+  window.__ready = true;
+}
+
+if (map.isStyleLoaded()) boot();
+else map.once('styledata', boot);
+map.on('load', boot);            // harmless belt-and-braces; boot() is idempotent
+</script>
+</body>
+</html>

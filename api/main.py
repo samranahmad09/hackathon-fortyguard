@@ -169,6 +169,51 @@ def blindspot() -> dict:
     }
 
 
+@app.post("/api/agent")
+def agent(payload: dict) -> dict:
+    """Ask the agent a question. Returns its answer plus the full audit trail.
+
+    POST {"question": "..."}
+
+    The audit trail is part of the response rather than a log line: a
+    recommendation about where a city spends money should be traceable to the
+    measurement behind it.
+    """
+    question = (payload or {}).get("question", "").strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="Provide a 'question' field.")
+
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail=("No OPENAI_API_KEY configured on the server. The map and all "
+                    "measurement endpoints work without it; only the agent needs it."),
+        )
+
+    from respite.agent import openai_model, run
+
+    try:
+        brief = run(question, openai_model())
+    except Exception as exc:  # noqa: BLE001 - surface provider failures as 502
+        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+    return brief.to_dict()
+
+
+@app.get("/api/agent/tools")
+def agent_tools() -> dict:
+    """What the agent can read. Exposed so the demo can show its working."""
+    from respite.agent import tool_schemas
+
+    return {
+        "tools": [
+            {"name": t["function"]["name"], "description": t["function"]["description"]}
+            for t in tool_schemas()
+        ],
+        "note": ("analysis_limits is a tool rather than a prompt instruction so the "
+                 "agent cannot drift away from the claims the data will not support."),
+    }
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC / "index.html")

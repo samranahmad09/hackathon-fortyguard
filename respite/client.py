@@ -22,7 +22,7 @@ from fortyguard import FortyGuardClient
 
 # The vendor default is 60 s. A citywide 60 m request is tens of megabytes.
 HTTP_TIMEOUT = 900.0
-JOB_TIMEOUT = 1800.0
+JOB_TIMEOUT = 240.0
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
@@ -82,6 +82,107 @@ def heatmap(*, cache: bool = True, **kwargs: Any) -> dict:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(result), encoding="utf-8")
     return result
+
+
+# Land-cover classes the segmentation endpoint has been observed to return.
+# Only classes present in an image appear in its `segments` dict, so the key set
+# varies per call -- normalise on ingest and shout about anything unrecognised
+# rather than letting it fall into "other" and quietly deflate the built share.
+_BUILT = {
+    "building", "skyscraper", "house", "road, route", "sidewalk, pavement",
+    "bridge, span", "wall", "fence", "runway", "railing, rail", "rail", "path",
+    "parking lot", "hovel, hut", "tower", "roof", "column, pillar",
+}
+_VEG = {"tree", "grass", "plant", "palm, palm tree", "field", "flower", "bush"}
+_BARE = {
+    "earth, ground", "sand", "dirt track", "rock, stone", "hill", "land",
+    "mountain, mount",
+}
+_WATER = {"water", "sea", "river", "lake", "swimming pool", "pool"}
+
+# Transient objects sitting on top of the surface. Classified, but they tell us
+# nothing about what the ground is made of.
+_TRANSIENT = {"car", "truck", "van", "person", "plane", "boat", "bus", "sky"}
+
+# "others" is the model's own I-don't-know bucket, and it is not a land-cover
+# class. One sampled tract came back {"others": 100.0} -- nothing was classified
+# at all. Treating that as 0% built would feed a fabricated zero into the
+# regression, so it is tracked separately and such tracts are excluded.
+_UNCLASSIFIED = {"others", "other", "unknown"}
+
+
+def satellite(*, cache: bool = True, **kwargs: Any) -> dict:
+    """``satellite_segmentation`` with the same caching and guards.
+
+    Costs 14,400 credits per call -- 3.4x a heatmap -- so the cache matters.
+    """
+    path = _cache_path("satellite", kwargs)
+    if cache and path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    result = client().satellite_segmentation(
+        wait=True, timeout=JOB_TIMEOUT, verbose=False, **kwargs
+    )
+    body = result.get("result", result)
+    if not (body.get("segmentation") or {}).get("segments"):
+        raise EmptyResultError(
+            f"satellite at {kwargs.get('latitude')},{kwargs.get('longitude')}: "
+            "no segments returned. This call was billed."
+        )
+
+    if cache:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result), encoding="utf-8")
+    return result
+
+
+# Below this share of genuinely classified surface, a tract's composition is not
+# a measurement and must not enter a regression.
+MIN_CLASSIFIED = 0.50
+
+
+def land_cover(result: dict) -> dict:
+    """Normalise per-class percentages into a fixed schema.
+
+    ``built_share`` is the headline: built surface as a fraction of *classified*
+    area, so a tract where the model gave up on half the image is not silently
+    recorded as half-unbuilt. ``usable`` says whether enough was classified to
+    trust the composition at all, and ``unmapped`` lists any class outside the
+    vocabulary so a silent misclassification cannot pass unnoticed.
+    """
+    segs = result["result"]["segmentation"]["segments"]
+    out = {
+        "built": 0.0, "vegetation": 0.0, "bare": 0.0, "water": 0.0,
+        "transient": 0.0, "unclassified": 0.0,
+    }
+    unmapped: list[str] = []
+    for name, pct in segs.items():
+        key = name.strip().lower()
+        frac = float(pct) / 100.0
+        if key in _BUILT:
+            out["built"] += frac
+        elif key in _VEG:
+            out["vegetation"] += frac
+        elif key in _BARE:
+            out["bare"] += frac
+        elif key in _WATER:
+            out["water"] += frac
+        elif key in _TRANSIENT:
+            out["transient"] += frac
+        elif key in _UNCLASSIFIED:
+            out["unclassified"] += frac
+        else:
+            out["unclassified"] += frac
+            unmapped.append(name)
+
+    surface = out["built"] + out["vegetation"] + out["bare"] + out["water"]
+    out["classified"] = round(surface, 4)
+    out["usable"] = surface >= MIN_CLASSIFIED
+    out["built_share"] = round(out["built"] / surface, 4) if surface > 0 else None
+    out["veg_share"] = round(out["vegetation"] / surface, 4) if surface > 0 else None
+    out["bare_share"] = round(out["bare"] / surface, 4) if surface > 0 else None
+    out["unmapped"] = unmapped
+    return out
 
 
 def credits() -> dict:

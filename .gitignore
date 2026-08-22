@@ -258,3 +258,4 @@ data/raw/
 !data/processed/*.geojson
 !data/tracts.geojson
 !data/svi_tracts.csv
+!data/landcover_sample.csv

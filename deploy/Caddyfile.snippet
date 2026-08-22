@@ -1,0 +1,30 @@
+# Respite — append this to the existing Caddyfile on the Hetzner box.
+#
+# Additive by design: a new site block for a new subdomain. It does not touch
+# any existing site, port, or certificate. Caddy provisions TLS for the new
+# hostname automatically on first request, provided the DNS A record already
+# resolves and ports 80/443 reach this machine.
+
+respite.samtechpk.com {
+	# uvicorn is bound to loopback only, so the app is never reachable except
+	# through this block. Nothing in the app serves a credential to a client,
+	# but keeping it off the public interface removes the question entirely.
+	reverse_proxy 127.0.0.1:8020
+
+	encode zstd gzip
+
+	header {
+		# The tract layer is ~550 KB of GeoJSON; let browsers keep it.
+		?Cache-Control "public, max-age=300"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output file C:/caddy/logs/respite.log {
+			roll_size 10MiB
+			roll_keep 3
+		}
+	}
+}

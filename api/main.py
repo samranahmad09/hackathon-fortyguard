@@ -109,3 +109,17 @@ def index() -> FileResponse:
 
 if STATIC.exists():
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+if __name__ == "__main__":
+    # Convenience entry point so the box can run `python -m api.main` without
+    # remembering uvicorn flags. Defaults to loopback: in production Caddy is
+    # the only thing that should reach this process.
+    import uvicorn
+
+    uvicorn.run(
+        "api.main:app",
+        host=os.getenv("RESPITE_HOST", "127.0.0.1"),
+        port=int(os.getenv("RESPITE_PORT", "8020")),
+        reload=os.getenv("RESPITE_RELOAD") == "1",
+    )

@@ -17,8 +17,8 @@ Add one record at whoever hosts `samtechpk.com` DNS:
 |---|---|---|
 | A | `respite` | *the box's public IPv4* |
 
-Confirm it resolves before touching Caddy — Caddy's certificate request will
-fail if the name does not yet point at the machine:
+Confirm it resolves before touching Caddy. Its certificate request will fail
+if the name does not yet point at the machine:
 
 ```powershell
 Resolve-DnsName respite.samtechpk.com -Type A
@@ -52,7 +52,7 @@ notepad .env
 ```
 
 `.env` is gitignored and must stay that way. The app reads keys from the
-environment and never returns their values — `/health` reports only whether each
+environment and never returns their values. `/health` reports only whether each
 one is *present*.
 
 The map does not need any key at all. Only the agent (still to be built) needs
@@ -88,7 +88,7 @@ Register-ScheduledTask -TaskName "respite-api" -Action $action -Trigger $trigger
 Start-ScheduledTask -TaskName "respite-api"
 ```
 
-If NSSM is already installed on the box, prefer it — it gives real service
+If NSSM is already installed on the box, prefer it. It gives real service
 semantics and log redirection.
 
 ## 6. Caddy
@@ -101,8 +101,8 @@ caddy validate --config C:\caddy\Caddyfile
 caddy reload   --config C:\caddy\Caddyfile
 ```
 
-`reload` is graceful — existing sites keep serving. Adjust the log path in the
-snippet if the Caddy log directory differs.
+`reload` is graceful and existing sites keep serving. Adjust the log path in
+the snippet if the Caddy log directory differs.
 
 ## 7. Verify from outside
 
@@ -135,7 +135,7 @@ reused, so re-running the script without changing parameters costs nothing.
 | Symptom | Likely cause |
 |---|---|
 | Caddy cannot get a certificate | DNS not resolving yet, or 80/443 blocked |
-| 502 from Caddy | uvicorn not running — check the scheduled task |
+| 502 from Caddy | uvicorn not running. Check the scheduled task |
 | `layer_present: false` | `data/processed/tracts_recovery.geojson` missing; run `build_layer.py` |
 | Page loads, no tracts | check the browser console; `/api/tracts` should return 134 features |
-| Stale numbers | the in-memory layer cache — restart the task |
+| Stale numbers | the in-memory layer cache. Restart the task |

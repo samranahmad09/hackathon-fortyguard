@@ -213,7 +213,7 @@ outputs/
 # Local scratch / working files (PDF cell templates, patches, dumps)
 .scratch/
 
-# Project data — sample CSVs, cached API responses, live captures.
+# Project data: sample CSVs, cached API responses, live captures.
 # By default nothing under data/ ships with the repo; users bring their own
 # input files and any cached responses they want to reuse.
 #

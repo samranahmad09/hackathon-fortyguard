@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Respite — Phoenix overnight recovery gap</title>
+<title>Respite: Phoenix overnight recovery gap</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
   :root{
@@ -52,11 +52,11 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 const BINS = [
-  { max: 3.2, color: '#1a5b8a', label: 'under 3.2 h — real relief' },
+  { max: 3.2, color: '#1a5b8a', label: 'under 3.2 h, real relief' },
   { max: 4.0, color: '#4a9ec4', label: '3.2 – 4.0 h' },
   { max: 4.7, color: '#f0d97d', label: '4.0 – 4.7 h' },
   { max: 5.4, color: '#e08a3c', label: '4.7 – 5.4 h' },
-  { max: 99,  color: '#bd4a1a', label: 'over 5.4 h — almost no relief' },
+  { max: 99,  color: '#bd4a1a', label: 'over 5.4 h, almost no relief' },
 ];
 
 function colorExpr() {
@@ -208,7 +208,7 @@ function tryBasemap() {
     map.addLayer({ id: 'osm', type: 'raster', source: 'osm',
                    paint: { 'raster-opacity': 0.5 } }, 'fill');
   } catch (e) {
-    warn('Basemap unavailable — tract data is unaffected.');
+    warn('Basemap unavailable. Tract data is unaffected.');
   }
 }
 

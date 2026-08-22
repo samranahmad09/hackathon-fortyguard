@@ -257,3 +257,4 @@ data/raw/
 !data/processed/
 !data/processed/*.geojson
 !data/tracts.geojson
+!data/svi_tracts.csv

@@ -28,7 +28,15 @@ from typing import Any, Callable, Protocol
 
 from . import tools as T
 
-MODEL = os.getenv("RESPITE_MODEL", "gpt-4.1")
+# gpt-5.5 by eval, not by preference for the newer number. On the 16-case suite
+# gpt-4.1 scored 12 and gpt-5.5 scored 16. The gap that decided it: asked to
+# explain the physical mechanism behind the pattern, gpt-4.1 answered from its
+# own priors with zero tool calls and asserted that surface materials and
+# vegetation cause the difference, which is precisely the claim this project
+# measured and could not support. gpt-5.5 answered "we cannot identify the
+# physical mechanism from this dataset" and cited the regression instead.
+# It costs roughly 10 s per question against 2 s, which is fine for a briefing.
+MODEL = os.getenv("RESPITE_MODEL", "gpt-5.5")
 MAX_STEPS = 12
 
 SYSTEM = """You are Respite, an analyst working for a city heat-response office.
@@ -220,10 +228,28 @@ def openai_model(api_key: str | None = None, model: str = MODEL) -> Model:
 
     client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
 
+    # Newer reasoning models reject a non-default temperature outright, so rather
+    # than keeping a list of which ones, drop any parameter the API rejects and
+    # remember that for the rest of the session.
+    unsupported: set[str] = set()
+
     def call(messages: list[dict], tools: list[dict]) -> dict:
-        resp = client.chat.completions.create(
-            model=model, messages=messages, tools=tools, temperature=0.2
-        )
+        for attempt in range(3):
+            kwargs: dict[str, Any] = {"model": model, "messages": messages, "tools": tools}
+            if "temperature" not in unsupported:
+                kwargs["temperature"] = 0.2
+            try:
+                resp = client.chat.completions.create(**kwargs)
+                break
+            except Exception as exc:  # noqa: BLE001
+                text = str(exc)
+                dropped = next(
+                    (p for p in ("temperature", "top_p") if p in text and p not in unsupported),
+                    None,
+                )
+                if dropped is None or attempt == 2:
+                    raise
+                unsupported.add(dropped)
         msg = resp.choices[0].message
         return {
             "content": msg.content,

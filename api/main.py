@@ -20,10 +20,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from respite import tools as rtools
 from respite.vulnerability import LABELS as VULN_LABELS
 
 ROOT = Path(__file__).resolve().parent.parent
 LAYER = ROOT / "data" / "processed" / "tracts_recovery.geojson"
+CURVES = ROOT / "data" / "processed" / "night_curves.json"
 STATIC = Path(__file__).resolve().parent / "static"
 
 # The scripts each call load_dotenv themselves; the server did not, so a key sat
@@ -84,30 +86,26 @@ def tracts(min_coverage: float = 0.90) -> JSONResponse:
 
 @app.get("/api/summary")
 def summary() -> dict:
-    """Headline numbers, so the front end never recomputes them."""
+    """Headline numbers.
+
+    Delegates to :func:`respite.tools.exposure_overview` so the page and the agent
+    cannot disagree. Two separate implementations drifted once already.
+    """
     feats = [f for f in layer()["features"] if f["properties"].get("ok")]
-    vals = sorted(f["properties"]["value"] for f in feats)
-    if not vals:
+    if not feats:
         raise HTTPException(status_code=503, detail="No tracts pass the coverage filter.")
+    out = dict(rtools.exposure_overview())
+
     hottest = max(feats, key=lambda f: f["properties"]["value"])["properties"]
     coolest = min(feats, key=lambda f: f["properties"]["value"])["properties"]
-    no_relief = [f for f in feats if f["properties"].get("no_relief")]
-    return {
-        "tracts": len(vals),
-        "night_window": "00:00-06:00 local",
-        "threshold_c": 28.0,
-        "window_hours": 6.0,
-        "min_hours": round(vals[0], 2),
-        "max_hours": round(vals[-1], 2),
-        "spread_hours": round(vals[-1] - vals[0], 2),
-        # The headline: tracts that never drop below the threshold all night.
-        "tracts_with_no_relief": len(no_relief),
-        "max_relief_hours": round(6.0 - vals[0], 2),
-        "hottest": {"name": hottest["name"], "geoid": hottest["geoid"],
-                    "hours": round(hottest["value"], 2)},
-        "coolest": {"name": coolest["name"], "geoid": coolest["geoid"],
-                    "hours": round(coolest["value"], 2)},
-    }
+    out["min_hours"] = out["hours_above_threshold_min"]
+    out["max_hours"] = out["hours_above_threshold_max"]
+    out["max_relief_hours"] = round(out["window_hours"] - out["hours_above_threshold_min"], 2)
+    out["hottest"] = {"name": hottest["name"], "geoid": hottest["geoid"],
+                      "hours": round(hottest["value"], 2)}
+    out["coolest"] = {"name": coolest["name"], "geoid": coolest["geoid"],
+                      "hours": round(coolest["value"], 2)}
+    return out
 
 
 @app.get("/api/divergence")
@@ -119,33 +117,15 @@ def divergence() -> dict:
     both errors rather than blending them into one score, because the
     disagreement is the finding.
     """
-    feats = [f for f in layer()["features"] if f["properties"].get("ok")]
-    buckets: dict[str, dict] = {}
-    for f in feats:
-        p = f["properties"]
-        q = p.get("quadrant", "unknown")
-        b = buckets.setdefault(q, {"tracts": 0, "population": 0.0, "over_65": 0.0,
-                                   "label": VULN_LABELS.get(q, q)})
-        b["tracts"] += 1
-        b["population"] += p.get("population") or 0.0
-        b["over_65"] += p.get("over_65") or 0.0
-
-    for b in buckets.values():
-        b["population"] = round(b["population"])
-        b["over_65"] = round(b["over_65"])
-
-    severe = buckets.get("confirmed", {}).get("tracts", 0) +              buckets.get("blind_spot", {}).get("tracts", 0)
-    bs = buckets.get("blind_spot", {})
-    return {
-        "correlation_gap_vs_svi": 0.004,
-        "note": ("Measured overnight exposure and social vulnerability are "
-                 "uncorrelated here, so neither can substitute for the other."),
-        "quadrants": buckets,
-        "severe_tracts": severe,
-        "blind_spot_share_of_severe": (
-            round(bs.get("tracts", 0) / severe, 3) if severe else None
-        ),
-    }
+    out = dict(rtools.divergence_summary())
+    for q, b in out.get("quadrants", {}).items():
+        b["label"] = VULN_LABELS.get(q, q)
+    severe = out.get("severe_tracts") or 0
+    bs = out.get("quadrants", {}).get("blind_spot", {})
+    out["blind_spot_share_of_severe"] = (
+        round(bs.get("tracts", 0) / severe, 3) if severe else None
+    )
+    return out
 
 
 @app.get("/api/blindspot")
@@ -172,6 +152,55 @@ def blindspot() -> dict:
             }
             for p in feats
         ],
+    }
+
+
+@app.get("/api/curves")
+def curves(pair: bool = True) -> dict:
+    """Hourly temperature through the night.
+
+    ``pair=True`` returns just two contrasting tracts, which is what the chart
+    needs: one that cools and one that does not. The full set is available for
+    anyone who wants to check that the pair was not cherry-picked.
+    """
+    if not CURVES.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Night curves not built. Run scripts/night_curve.py.",
+        )
+    data = json.loads(CURVES.read_text(encoding="utf-8"))
+    if not pair:
+        return data
+
+    tracts = [
+        {"geoid": g, **t} for g, t in data["tracts"].items()
+        if t.get("hours_above_threshold") is not None and t.get("svi") is not None
+    ]
+    if not tracts:
+        raise HTTPException(status_code=503, detail="No tracts with a full curve.")
+
+    # Selected on the overnight *minimum*, not the size of the drop. The metric
+    # this page reports is time spent above the threshold, so the pair that
+    # illustrates it is the tract whose night never gets under the line against
+    # the one that gets furthest under it. Ranking by drop picked a pair that both
+    # crossed the threshold, which showed nothing.
+    thr = data["threshold_c"]
+    tracts.sort(key=lambda t: t["min_c"])
+    cools, flat = tracts[0], tracts[-1]
+    below = sum(1 for v in cools["series"] if v < thr)
+    return {
+        "date": data["date"],
+        "hours": data["hours"],
+        "threshold_c": thr,
+        "flat": flat,
+        "cools": cools,
+        "cools_hours_below": below,
+        "min_gap_c": round(flat["min_c"] - cools["min_c"], 2),
+        "n_tracts_measured": len(tracts),
+        "selection": (
+            "The highest and lowest overnight minimum across every measured tract, "
+            "picked by the data rather than by hand."
+        ),
     }
 
 

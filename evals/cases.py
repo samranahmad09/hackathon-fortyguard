@@ -45,8 +45,17 @@ CASES: list[Case] = [
     # ---------------------------------------------------------------- retrieval
     Case(
         id="overview",
-        question="Give me the headline numbers for the study area in two sentences.",
-        why="Basic retrieval. Should reach for the overview tool and quote real figures.",
+        question=(
+            "How many tracts were measured, and how many of them had no overnight "
+            "relief at all?"
+        ),
+        why=(
+            "Basic retrieval. Asks for exactly the two figures the check requires: an "
+            "earlier version said 'headline numbers in two sentences' and then demanded "
+            "both, which passed or failed depending on which the model chose to include. "
+            "A flaky case is worse than a failing one, because it teaches you to ignore "
+            "red."
+        ),
         must_call={"exposure_overview"},
         require=[r"\b134\b", r"\b18\b"],
     ),

@@ -3,176 +3,561 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Respite: Phoenix overnight recovery gap</title>
+<title>Respite: which Phoenix blocks never cool down</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#0e2129; --muted:#64808c; --hairline:#cfdde3; --panel:#f8fbfc; --ground:#e8eef1;
+  :root {
+    color-scheme: light;
+    --surface-1:  #fcfcfb;
+    --surface-2:  #f4f3f0;
+    --hairline:   #e2e0da;
+    --ink-1:      #14140f;
+    --ink-2:      #52514e;
+    --ink-3:      #86847c;
+
+    /* Categorical. Validated in both modes: worst adjacent CVD dE 24.7 light,
+       26.8 dark; all six checks pass. */
+    --series-1:   #2a78d6;   /* the tract that gets below the line */
+    --series-2:   #eb6834;   /* the tract that never does */
+    --accent:     #eb6834;
+    --deemph:     #c9c7bf;
+
+    /* Sequential heat ramp. Semantic heat is the sanctioned multi-hue exception,
+       so it stays warm-analogous throughout (no cool pole, no rainbow) and ships
+       with a scale legend. */
+    --heat-1: #fde9b8;
+    --heat-2: #f8c877;
+    --heat-3: #ef9a45;
+    --heat-4: #d96a28;
+    --heat-5: #a83a16;
+
+    --f-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+    --f-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-data: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --wide: 74rem;
+    --read: 36rem;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%;font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
-  #map{position:absolute;inset:0;background:var(--ground)}
-  .panel{
-    position:absolute;top:1rem;left:1rem;z-index:2;width:min(21rem,calc(100vw - 2rem));
-    background:var(--panel);border:1px solid var(--hairline);border-radius:.5rem;
-    padding:1rem 1.15rem;box-shadow:0 .5rem 1.5rem rgba(14,33,41,.12);
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
+      --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
+      --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
+      --heat-1: #5c4a1f; --heat-2: #8a6520; --heat-3: #b87a2a;
+      --heat-4: #cf6427; --heat-5: #e0533a;
+    }
   }
-  h1{margin:0 0 .15rem;font-size:1.05rem;letter-spacing:-.01em}
-  .sub{margin:0 0 .85rem;font-size:.8rem;color:var(--muted);font-style:italic}
-  .stat{display:flex;justify-content:space-between;gap:1rem;font-size:.82rem;padding:.2rem 0}
-  .stat b{font-variant-numeric:tabular-nums}
-  .tabs{display:flex;gap:.35rem;margin:0 0 .8rem}
-  .tab{flex:1;font:inherit;font-size:.72rem;padding:.4rem .3rem;cursor:pointer;
-       border:1px solid var(--hairline);background:#fff;color:var(--muted);border-radius:.3rem}
-  .tab.on{background:#0e2129;color:#fff;border-color:#0e2129}
-  .legend{margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--hairline)}
-  .legend .row{display:flex;align-items:center;gap:.5rem;font-size:.75rem;padding:.12rem 0}
-  .sw{width:1.1rem;height:.65rem;border-radius:2px;flex:none}
-  .note{margin-top:.75rem;font-size:.7rem;color:var(--muted);line-height:1.5}
-  .warn{margin-top:.5rem;font-size:.7rem;color:#bd4a1a}
-  .qrow{display:flex;gap:.35rem;margin:.2rem 0 .6rem}
-  #q{flex:1;min-width:0;font:inherit;font-size:.78rem;padding:.4rem .5rem;
-     border:1px solid var(--hairline);border-radius:.3rem}
-  #ask{font:inherit;font-size:.75rem;padding:.4rem .7rem;cursor:pointer;
-       background:#0e2129;color:#fff;border:none;border-radius:.3rem}
-  #ask[disabled]{opacity:.5;cursor:default}
-  .chips{display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.55rem}
-  .chip{font:inherit;font-size:.66rem;padding:.2rem .45rem;cursor:pointer;color:var(--muted);
-        background:#fff;border:1px solid var(--hairline);border-radius:.9rem;text-align:left}
-  .answer{font-size:.8rem;line-height:1.55;white-space:pre-wrap;max-height:15rem;overflow-y:auto}
-  .trail{margin-top:.55rem;padding-top:.5rem;border-top:1px solid var(--hairline);
-         font-family:ui-monospace,Consolas,monospace;font-size:.66rem;color:var(--muted);
-         max-height:8rem;overflow-y:auto}
-  .trail b{color:var(--ink);font-weight:600}
-  .maplibregl-popup-content{font-size:.8rem;padding:.6rem .75rem;border-radius:.4rem}
-  .maplibregl-popup-content b{display:block;margin-bottom:.2rem}
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
+    --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
+    --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
+    --heat-1: #5c4a1f; --heat-2: #8a6520; --heat-3: #b87a2a;
+    --heat-4: #cf6427; --heat-5: #e0533a;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--surface-1); color: var(--ink-1);
+    font-family: var(--f-body); font-size: 1rem; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--wide); margin: 0 auto; padding: 0 clamp(1.1rem, 4vw, 2.5rem); }
+  section { padding: clamp(2.75rem, 6.5vw, 5rem) 0; border-top: 1px solid var(--hairline); }
+  section:first-of-type { border-top: 0; }
+
+  nav { position: sticky; top: 0; z-index: 50; background: var(--surface-1);
+        border-bottom: 1px solid var(--hairline); }
+  nav .wrap { display: flex; align-items: center; gap: 1.15rem; height: 3rem; }
+  nav b { font-family: var(--f-display); font-weight: 800; letter-spacing: -.02em; }
+  nav a { font-size: .78rem; color: var(--ink-2); text-decoration: none;
+          padding: .2rem 0; border-bottom: 2px solid transparent; }
+  nav a:hover { color: var(--ink-1); border-bottom-color: var(--accent); }
+  nav .spacer { flex: 1; }
+  .navtag { font-family: var(--f-data); font-size: .62rem; letter-spacing: .1em;
+            text-transform: uppercase; color: var(--ink-3); }
+  @media (max-width: 46rem) { nav a:not(.keep) { display: none; } .navtag { display: none; } }
+
+  h1 { font-family: var(--f-display); font-weight: 800;
+       font-size: clamp(2.05rem, 5.6vw, 3.8rem); line-height: 1.03; letter-spacing: -.03em;
+       margin: 0 0 1.15rem; max-width: 26ch; text-wrap: balance; }
+  h2 { font-family: var(--f-display); font-weight: 600;
+       font-size: clamp(1.45rem, 3.2vw, 2rem); line-height: 1.17; letter-spacing: -.02em;
+       margin: 0 0 .9rem; max-width: 32ch; text-wrap: balance; }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 1rem; margin: 0 0 .4rem; }
+  .eyebrow { font-family: var(--f-data); font-size: .68rem; font-weight: 500;
+             letter-spacing: .15em; text-transform: uppercase; color: var(--accent);
+             margin: 0 0 .85rem; }
+  p { margin: 0 0 .95rem; max-width: var(--read); color: var(--ink-2); }
+  p.lead { font-size: clamp(1.02rem, 1.8vw, 1.18rem); color: var(--ink-1); max-width: 34rem; }
+  strong { color: var(--ink-1); font-weight: 600; }
+  .mono { font-family: var(--f-data); }
+
+  .hero-fig { font-family: var(--f-display); font-weight: 800; letter-spacing: -.04em;
+              font-size: clamp(3.6rem, 13vw, 8rem); line-height: .85; color: var(--accent); }
+  .hero-grid { display: grid; gap: clamp(1.4rem, 4vw, 3rem); grid-template-columns: 1fr; }
+  @media (min-width: 56rem) { .hero-grid { grid-template-columns: 1fr 14rem; align-items: end; } }
+
+  .kpis { display: grid; gap: 1px; background: var(--hairline);
+          border: 1px solid var(--hairline); margin-top: 1.6rem;
+          grid-template-columns: repeat(auto-fit, minmax(min(10.5rem,100%),1fr)); }
+  .kpi { background: var(--surface-1); padding: .95rem 1.05rem; }
+  .kpi .v { font-family: var(--f-data); font-weight: 700; font-size: 1.4rem;
+            font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .kpi .l { font-size: .74rem; color: var(--ink-3); margin-top: .28rem; line-height: 1.35; }
+
+  figure { margin: 0; }
+  figcaption { font-size: .78rem; color: var(--ink-3); margin-top: .65rem; max-width: 46rem; }
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .grid-line { stroke: var(--hairline); stroke-width: 1; }
+  .axis-txt { font-family: var(--f-data); font-size: 10px; fill: var(--ink-3); }
+  .lbl { font-family: var(--f-body); font-size: 11.5px; font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; margin: 0 0 .85rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem;
+                 font-size: .78rem; color: var(--ink-2); }
+  .sw { width: 1.35rem; height: 3px; border-radius: 2px; flex: none; }
+  .sw.dot { width: .6rem; height: .6rem; border-radius: 50%; }
+
+  .maprow { display: grid; gap: 1.2rem; grid-template-columns: 1fr; }
+  @media (min-width: 60rem) { .maprow { grid-template-columns: 1fr 14rem; } }
+  #map { width: 100%; height: clamp(22rem, 55vh, 32rem); background: var(--surface-2);
+         border: 1px solid var(--hairline); }
+  .ramp { display: flex; height: .5rem; margin: .3rem 0 .3rem; }
+  .ramp i { flex: 1; }
+  .rampends { display: flex; justify-content: space-between;
+              font-family: var(--f-data); font-size: .64rem; color: var(--ink-3); }
+  .maplibregl-popup-content { font-size: .78rem; padding: .55rem .7rem; border-radius: .3rem;
+                              font-family: var(--f-body); }
+  .maplibregl-popup-content b { display: block; margin-bottom: .15rem; }
+
+  .cards { display: grid; gap: 1px; background: var(--hairline);
+           border: 1px solid var(--hairline);
+           grid-template-columns: repeat(auto-fit, minmax(min(14rem,100%),1fr)); }
+  .card { background: var(--surface-1); padding: 1.1rem 1.15rem; }
+  .card .t { font-family: var(--f-data); font-size: .66rem; letter-spacing: .1em;
+             text-transform: uppercase; color: var(--ink-3); }
+  .card .big { font-family: var(--f-display); font-weight: 800; font-size: 1.5rem;
+               letter-spacing: -.02em; margin: .18rem 0 .1rem; }
+  .card p { font-size: .8rem; margin: .4rem 0 0; }
+  .card .rank { display: inline-block; font-family: var(--f-data); font-size: .66rem;
+                padding: .12rem .4rem; background: var(--surface-2); color: var(--ink-2);
+                margin-top: .5rem; }
+
+  .askrow { display: flex; gap: .4rem; max-width: 40rem; }
+  #q { flex: 1; min-width: 0; font: inherit; font-size: .88rem; padding: .58rem .7rem;
+       border: 1px solid var(--hairline); border-radius: .25rem;
+       background: var(--surface-1); color: var(--ink-1); }
+  #ask-btn { font: inherit; font-size: .84rem; font-weight: 600; padding: .58rem 1.05rem;
+             cursor: pointer; background: var(--ink-1); color: var(--surface-1);
+             border: none; border-radius: .25rem; }
+  #ask-btn[disabled] { opacity: .45; cursor: default; }
+  .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0 1.05rem; }
+  .chip { font: inherit; font-size: .75rem; padding: .28rem .6rem; cursor: pointer;
+          background: var(--surface-2); color: var(--ink-2);
+          border: 1px solid var(--hairline); border-radius: 1rem; }
+  .chip:hover { color: var(--ink-1); border-color: var(--accent); }
+  .answer { font-size: .92rem; line-height: 1.6; white-space: pre-wrap;
+            max-width: 44rem; min-height: 1.5rem; }
+  .trail { margin-top: .9rem; padding-top: .7rem; border-top: 1px solid var(--hairline);
+           font-family: var(--f-data); font-size: .7rem; color: var(--ink-3); max-width: 44rem; }
+  .trail b { color: var(--ink-2); }
+
+  .limits { display: grid; gap: 1px; background: var(--hairline);
+            border: 1px solid var(--hairline); }
+  .limit { background: var(--surface-1); padding: 1rem 1.15rem;
+           display: grid; gap: .22rem 1.15rem; grid-template-columns: 1fr; }
+  @media (min-width: 48rem) { .limit { grid-template-columns: 12.5rem 1fr; } }
+  .limit .k { font-family: var(--f-data); font-size: .77rem; color: var(--accent); }
+  .limit p { margin: 0; font-size: .86rem; max-width: 46rem; }
+
+  .warn { color: var(--accent); font-size: .8rem; }
+  footer { border-top: 1px solid var(--hairline); padding: 1.9rem 0 3rem;
+           font-size: .77rem; color: var(--ink-3); }
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div class="panel">
-  <h1>Respite</h1>
-  <p class="sub">Which blocks never cool down</p>
-  <div class="tabs">
-    <button class="tab on" data-view="exposure">Exposure</button>
-    <button class="tab" data-view="divergence">What the index misses</button>
-    <button class="tab" data-view="agent">Ask</button>
-  </div>
-  <div id="stats"><div class="stat"><span>loading…</span></div></div>
-  <div class="legend" id="legend"></div>
-  <p class="note" id="note"></p>
-  <p class="warn" id="warn" hidden></p>
 
-  <div id="agentbox" hidden>
-    <div class="qrow">
-      <input id="q" type="text" placeholder="Ask about the study area">
-      <button id="ask">Ask</button>
+<nav><div class="wrap">
+  <b>Respite</b>
+  <a href="#night" class="keep">The night</a>
+  <a href="#map-sec">Map</a>
+  <a href="#gap">The gap</a>
+  <a href="#missed">Who is missed</a>
+  <a href="#ask" class="keep">Ask</a>
+  <span class="spacer"></span>
+  <span class="navtag">Phoenix &middot; 15 Aug 2026</span>
+</div></nav>
+
+<section><div class="wrap">
+  <div class="hero-grid">
+    <div>
+      <p class="eyebrow">Overnight heat, measured street by street</p>
+      <h1>Some neighbourhoods never cool down.</h1>
+      <p class="lead">On one August night in Phoenix, <strong>18 census tracts stayed above
+      28&nbsp;&deg;C from midnight until dawn</strong>. The air never once dropped below it.
+      Four kilometres away, another tract spent most of the night below that line.</p>
+      <p class="lead">Heat kills at night, when the body needs a cool window to recover.
+      The index cities use to decide where to help does not find these places.</p>
     </div>
-    <div class="chips" id="chips"></div>
-    <div id="answer" class="answer"></div>
-    <div id="trail" class="trail" hidden></div>
+    <div>
+      <div class="hero-fig" id="heroFig">18</div>
+      <p style="font-size:.82rem;margin:.4rem 0 0">tracts with <strong>no relief at all</strong>,
+      home to <span class="mono" id="heroPop">58,176</span> people</p>
+    </div>
   </div>
-</div>
+  <div class="kpis" id="kpis"></div>
+</div></section>
+
+<section id="night"><div class="wrap">
+  <p class="eyebrow">Why the night is what matters</p>
+  <h2>Two tracts, the same night, one line between them.</h2>
+  <p>Afternoon maps show the whole city as uniformly hot, because at four o'clock it is.
+  The difference appears after dark: some ground gives back the day's heat and some does
+  not. Overnight minimum temperature predicts heat deaths better than the daytime peak,
+  because a body that never cools never recovers.</p>
+
+  <figure>
+    <div class="legend" id="curveLegend"></div>
+    <svg class="chart" id="curveChart" viewBox="0 0 760 330" role="img"
+         aria-label="Hourly temperature through the night for two contrasting tracts"></svg>
+    <figcaption id="curveCap">Loading measured hourly temperatures.</figcaption>
+  </figure>
+</div></section>
+
+<section id="map-sec"><div class="wrap">
+  <p class="eyebrow">The whole study area</p>
+  <h2>Hours without relief, by neighbourhood.</h2>
+  <p>Each tract below is measured from roughly 48,000 temperature readings taken 100
+  metres apart, two metres above the ground, then averaged over the tract's area. Darker
+  means more of the night spent above 28&nbsp;&deg;C.</p>
+
+  <div class="maprow">
+    <div id="map"></div>
+    <aside>
+      <h3>Reading the map</h3>
+      <div class="ramp" id="ramp"></div>
+      <div class="rampends"><span>3 h</span><span>the whole night</span></div>
+      <p style="font-size:.81rem">The darkest tracts never went below 28&nbsp;&deg;C between
+      midnight and dawn. The palest had about three hours of genuine relief.</p>
+      <p style="font-size:.81rem">Hover any tract for its own numbers.</p>
+      <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
+    </aside>
+  </div>
+</div></section>
+
+<section id="gap"><div class="wrap">
+  <p class="eyebrow">The finding</p>
+  <h2>Heat and disadvantage do not line up here.</h2>
+  <p>Heat programmes are usually aimed using a social vulnerability index, which assumes
+  the most vulnerable places are also the hottest. In this study area the two are
+  unrelated: the correlation between overnight exposure and the CDC index is
+  <strong class="mono">r&nbsp;=&nbsp;0.004</strong>.</p>
+  <p>Each dot is one tract. If the assumption held, the dots would climb from left to
+  right. They do not. That flat cloud is the finding.</p>
+
+  <figure>
+    <div class="legend" id="scatterLegend"></div>
+    <svg class="chart" id="scatterChart" viewBox="0 0 760 380" role="img"
+         aria-label="Overnight exposure against social vulnerability, showing no relationship"></svg>
+    <figcaption id="scatterCap"></figcaption>
+  </figure>
+</div></section>
+
+<section id="missed"><div class="wrap">
+  <p class="eyebrow">The consequence</p>
+  <h2>The places a vulnerability-led programme walks past.</h2>
+  <p id="missedIntro"></p>
+  <div class="cards" id="missedCards"></div>
+  <p style="margin-top:1.2rem;font-size:.85rem">How many tracts count as missed depends on
+  where the targeting line is drawn, so here is the whole curve rather than one number:</p>
+  <div class="kpis" id="sensCurve"></div>
+</div></section>
+
+<section id="ask"><div class="wrap">
+  <p class="eyebrow">Ask the analysis</p>
+  <h2>It answers from the measurements, and says when it cannot.</h2>
+  <p>Every answer is built by reading the same numbers shown on this page. Before making a
+  recommendation it checks a list of things this data does not support, so it will refuse
+  an unanswerable question rather than invent a figure. The sources it read are listed
+  under each answer.</p>
+
+  <div class="askrow">
+    <input id="q" type="text" placeholder="Ask about the study area" aria-label="Ask a question">
+    <button id="ask-btn">Ask</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="answer" id="answer"></div>
+  <div class="trail" id="trail" hidden></div>
+</div></section>
+
+<section id="limits"><div class="wrap">
+  <p class="eyebrow">What this does not show</p>
+  <h2>The claims we tested and could not support.</h2>
+  <p>These are here because a tool that only reports what it found is harder to trust than
+  one that also says where it stops.</p>
+  <div class="limits">
+    <div class="limit">
+      <div class="k">No intervention effects</div>
+      <p>We sampled surface composition at 50 tracts to test whether pavement and canopy
+      explain overnight heat. Once position is accounted for, they do not: built surface
+      gives <span class="mono">t&nbsp;=&nbsp;+0.24</span>, vegetation
+      <span class="mono">t&nbsp;=&nbsp;-1.46</span>. So this tool never estimates how much
+      cooling any intervention would buy.</p>
+    </div>
+    <div class="limit">
+      <div class="k">Position, not mechanism</div>
+      <p>Latitude and longitude alone explain about 70% of the variation. Something about
+      where a tract sits drives this, but we did not test what. Elevation, drainage and
+      distance from open desert are all untested candidates.</p>
+    </div>
+    <div class="limit">
+      <div class="k">A ceiling on the metric</div>
+      <p>The measure caps at six hours. Tracts at the cap were above 28&nbsp;&deg;C for the
+      whole window and we cannot tell which was hottest, so they are not ranked against
+      each other.</p>
+    </div>
+    <div class="limit">
+      <div class="k">One night, one city</div>
+      <p>15 August 2026, 134 tracts in central Phoenix. Nothing here should be read as
+      applying to another city, season or date.</p>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  Built on the FortyGuard Temperature API for Hackathon'26. Vulnerability data from the
+  CDC/ATSDR Social Vulnerability Index 2022, tract boundaries from the US Census.
+  <span id="foot"></span>
+</div></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-const BINS = [
-  { max: 3.2, color: '#1a5b8a', label: 'under 3.2 h, real relief' },
-  { max: 4.0, color: '#4a9ec4', label: '3.2 – 4.0 h' },
-  { max: 4.7, color: '#f0d97d', label: '4.0 – 4.7 h' },
-  { max: 5.4, color: '#e08a3c', label: '4.7 – 5.4 h' },
-  { max: 99,  color: '#bd4a1a', label: 'over 5.4 h, almost no relief' },
-];
+'use strict';
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (n) => Number(n).toLocaleString();
+const esc = (s) => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-function colorExpr() {
-  const e = ['step', ['get', 'value'], BINS[0].color];
-  for (let i = 0; i < BINS.length - 1; i++) e.push(BINS[i].max, BINS[i + 1].color);
-  return e;
+async function loadHeadline() {
+  const [sum, div] = await Promise.all([
+    fetch('/api/summary').then(r => r.json()),
+    fetch('/api/divergence').then(r => r.json())
+  ]);
+  document.getElementById('heroFig').textContent = sum.tracts_with_no_relief;
+  document.getElementById('heroPop').textContent = fmt(sum.population_with_no_relief || 0);
+
+  const bs = (div.quadrants && div.quadrants.blind_spot) || { tracts: 0, population: 0, over_65: 0 };
+  document.getElementById('kpis').innerHTML = [
+    [sum.tracts, 'census tracts measured across central Phoenix'],
+    [sum.spread_hours + ' h', 'between the tract with the most relief and those with none'],
+    ['r = ' + div.correlation_exposure_vs_svi, 'correlation between overnight heat and the vulnerability index'],
+    [bs.tracts + ' of ' + div.severe_tracts, 'worst-exposed tracts fall outside the targeted band']
+  ].map(([v, l]) => '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>').join('');
+
+  document.getElementById('mapKpis').innerHTML = [
+    [sum.max_relief_hours + ' h', 'most relief any tract got'],
+    ['0 h', 'relief in ' + sum.tracts_with_no_relief + ' tracts']
+  ].map(([v, l]) => '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>').join('');
+
+  document.getElementById('sensCurve').innerHTML = (div.threshold_sensitivity || [])
+    .map(r => '<div class="kpi"><div class="v">' + r.missed_tracts + '</div><div class="l">'
+      + 'missed if the line sits at <span class="mono">' + r.svi_threshold + '</span><br>'
+      + fmt(r.population) + ' people</div></div>').join('');
 }
 
-// Exposure and vulnerability are uncorrelated here (r = 0.004), so the second
-// view deliberately does not blend them into one score -- it shows where they
-// disagree, because the disagreement is the finding.
-const QUADS = [
-  ['blind_spot',    '#bd4a1a', 'Severe heat, outside the targeted band'],
-  ['confirmed',     '#e8a33c', 'Severe heat, inside the targeted band'],
-  ['over_targeted', '#7fa8bd', 'Targeted, but the night is survivable'],
-  ['low_priority',  '#dfe7ea', 'Neither'],
-  ['unknown',       '#b8bfc4', 'Vulnerability suppressed'],
-];
-
-function quadExpr() {
-  const e = ['match', ['get', 'quadrant']];
-  for (const q of QUADS) { e.push(q[0], q[1]); }
-  e.push('#dfe7ea');
-  return e;
-}
-
-let VIEW = 'exposure';
-
-function renderLegend() {
-  const rows = VIEW === 'exposure'
-    ? BINS.map(b => [b.color, b.label])
-    : QUADS.map(q => [q[1], q[2]]);
-  document.getElementById('legend').innerHTML = rows.map(r =>
-    '<div class="row"><span class="sw" style="background:' + r[0] + '"></span>' + r[1] + '</div>'
-  ).join('');
-}
-
-function applyView() {
-  const isAgent = VIEW === 'agent';
-  if (map.getLayer('fill')) {
-    // The agent view keeps the divergence colouring, since that is what it talks about.
-    map.setPaintProperty('fill', 'fill-color',
-      VIEW === 'exposure' ? colorExpr() : quadExpr());
-    map.setPaintProperty('fill', 'fill-opacity', VIEW === 'exposure' ? 0.8 : 0.85);
-  }
-  document.getElementById('agentbox').hidden = !isAgent;
-  document.getElementById('legend').hidden = isAgent;
-  document.getElementById('note').hidden = isAgent;
-  renderLegend();
-  renderStats();
-}
-
-function warn(msg) {
-  const el = document.getElementById('warn');
-  el.hidden = false;
-  el.textContent = msg;
-}
-
-// ---- 1. Panel first. It must never depend on the map or on any third party. ----
-let SUMMARY = null, DIVERGENCE = null;
-
-function renderStats() {
-  const el = document.getElementById('stats');
-  const note = document.getElementById('note');
-  if (VIEW === 'exposure') {
-    if (!SUMMARY) { el.innerHTML = '<div class="stat"><span>unavailable</span></div>'; return; }
-    el.innerHTML =
-      '<div class="stat"><span>Tracts</span><b>' + SUMMARY.tracts + '</b></div>' +
-      '<div class="stat"><span><b>No relief all night</b></span><b>' + SUMMARY.tracts_with_no_relief + ' tracts</b></div>' +
-      '<div class="stat"><span>Best relief</span><b>' + SUMMARY.max_relief_hours + ' h of ' + SUMMARY.window_hours + '</b></div>' +
-      '<div class="stat"><span>Spread</span><b>' + SUMMARY.spread_hours + ' h</b></div>';
-    note.textContent = 'Hours above ' + SUMMARY.threshold_c + ' \u00b0C during ' + SUMMARY.night_window +
-      ', Phoenix, 15 Aug 2026. Area-weighted from 47,944 tiles at 100 m onto ' + SUMMARY.tracts + ' census tracts.';
-  } else if (VIEW === 'agent') {
-    el.innerHTML =
-      '<div class="stat"><span>Agent reads</span><b>5 measurement tools</b></div>' +
-      '<div class="stat"><span>Before recommending</span><b>checks stated limits</b></div>';
+async function drawCurve() {
+  const cap = document.getElementById('curveCap');
+  let d;
+  try {
+    const r = await fetch('/api/curves');
+    if (!r.ok) throw new Error('status ' + r.status);
+    d = await r.json();
+  } catch (e) {
+    cap.textContent = 'Hourly curve unavailable. Every other number on this page is unaffected.';
+    cap.className = 'warn';
     return;
-  } else {
-    if (!DIVERGENCE) { el.innerHTML = '<div class="stat"><span>unavailable</span></div>'; return; }
-    const bs = DIVERGENCE.quadrants.blind_spot || { tracts: 0, population: 0, over_65: 0 };
-    el.innerHTML =
-      '<div class="stat"><span>Exposure vs vulnerability</span><b>r = ' + DIVERGENCE.correlation_gap_vs_svi + '</b></div>' +
-      '<div class="stat"><span><b>Missed by the index</b></span><b>' + bs.tracts + ' of ' + DIVERGENCE.severe_tracts + ' hot tracts</b></div>' +
-      '<div class="stat"><span>People in them</span><b>' + bs.population.toLocaleString() + '</b></div>' +
-      '<div class="stat"><span>Aged 65+ in them</span><b>' + bs.over_65.toLocaleString() + '</b></div>';
-    note.textContent = 'Measured overnight exposure and CDC social vulnerability are uncorrelated ' +
-      'in this study area, so neither substitutes for the other. Red tracts are severely exposed ' +
-      'but fall outside the top-quartile band a programme would target. That count depends on ' +
-      'where the line is drawn: 15 tracts at SVI 0.75, 4 at SVI 0.50.';
   }
+  const svg = document.getElementById('curveChart');
+  const W = 760, H = 330, m = { t: 18, r: 104, b: 36, l: 46 };
+  const hours = d.hours, n = hours.length;
+  const all = d.flat.series.concat(d.cools.series, [d.threshold_c]);
+  const lo = Math.floor(Math.min.apply(null, all) - 1);
+  const hi = Math.ceil(Math.max.apply(null, all) + 1);
+  const X = i => m.l + (i / (n - 1)) * (W - m.l - m.r);
+  const Y = v => H - m.b - ((v - lo) / (hi - lo)) * (H - m.t - m.b);
+
+  let g = '';
+  for (let v = lo; v <= hi; v += 2) {
+    g += '<line class="grid-line" x1="' + m.l + '" y1="' + Y(v) + '" x2="' + (W - m.r) + '" y2="' + Y(v) + '"/>'
+       + '<text class="axis-txt" x="' + (m.l - 8) + '" y="' + (Y(v) + 3.5) + '" text-anchor="end">' + v + '°</text>';
+  }
+  hours.forEach((h, i) => {
+    g += '<text class="axis-txt" x="' + X(i) + '" y="' + (H - m.b + 16) + '" text-anchor="middle">' + h + '</text>';
+  });
+  g += '<line x1="' + m.l + '" y1="' + Y(d.threshold_c) + '" x2="' + (W - m.r) + '" y2="' + Y(d.threshold_c)
+     + '" stroke="' + css('--ink-3') + '" stroke-width="1"/>'
+     + '<text class="axis-txt" x="' + (W - m.r + 6) + '" y="' + (Y(d.threshold_c) + 3.5) + '">'
+     + d.threshold_c + '°C</text>';
+
+  const draw = (t, color, label) => {
+    const pts = t.series.map((v, i) => X(i) + ',' + Y(v)).join(' ');
+    const lx = X(n - 1), ly = Y(t.series[n - 1]);
+    return '<polyline points="' + pts + '" fill="none" stroke="' + color
+      + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      + '<circle cx="' + lx + '" cy="' + ly + '" r="4.5" fill="' + color
+      + '" stroke="' + css('--surface-1') + '" stroke-width="2"/>'
+      + '<text class="lbl" x="' + (lx + 9) + '" y="' + (ly - 3) + '" fill="' + css('--ink-1') + '">' + label + '</text>'
+      + '<text class="lbl" x="' + (lx + 9) + '" y="' + (ly + 12) + '" fill="' + css('--ink-3')
+      + '" style="font-weight:400">' + t.series[n - 1].toFixed(1) + '°C</text>';
+  };
+  g += draw(d.flat, css('--series-2'), 'Tract ' + d.flat.name);
+  g += draw(d.cools, css('--series-1'), 'Tract ' + d.cools.name);
+  svg.innerHTML = g;
+
+  document.getElementById('curveLegend').innerHTML =
+    '<span><i class="sw" style="background:' + css('--series-2') + '"></i>Tract ' + esc(d.flat.name)
+    + ': never gets below the line</span>'
+    + '<span><i class="sw" style="background:' + css('--series-1') + '"></i>Tract ' + esc(d.cools.name)
+    + ': below it for ' + d.cools_hours_below + ' of ' + n + ' hours</span>';
+
+  cap.textContent = 'Measured hourly, ' + d.date + ', midnight to dawn. Tract ' + d.flat.name
+    + ' starts at ' + d.flat.max_c.toFixed(1) + '°C and bottoms out at ' + d.flat.min_c.toFixed(1)
+    + '°C, never once crossing below 28°C. Tract ' + d.cools.name + ' reaches '
+    + d.cools.min_c.toFixed(1) + '°C and spends ' + d.cools_hours_below + ' of ' + n
+    + ' hours under the line. Their overnight minimums differ by ' + d.min_gap_c
+    + '°C. These are the highest and lowest minimums of ' + d.n_tracts_measured
+    + ' measured tracts, picked by the data rather than by hand.';
+}
+
+async function drawScatter() {
+  const gj = await fetch('/api/tracts').then(r => r.json());
+  const pts = gj.features.map(f => f.properties).filter(p => p.svi != null && p.value != null);
+  const svg = document.getElementById('scatterChart');
+  const W = 760, H = 380, m = { t: 16, r: 20, b: 46, l: 54 };
+  const X = v => m.l + v * (W - m.l - m.r);
+  const Y = v => H - m.b - ((v - 2.5) / (6.2 - 2.5)) * (H - m.t - m.b);
+
+  let g = '';
+  for (let v = 3; v <= 6; v += 1) {
+    g += '<line class="grid-line" x1="' + m.l + '" y1="' + Y(v) + '" x2="' + (W - m.r) + '" y2="' + Y(v) + '"/>'
+       + '<text class="axis-txt" x="' + (m.l - 8) + '" y="' + (Y(v) + 3.5) + '" text-anchor="end">' + v + ' h</text>';
+  }
+  [0, 25, 50, 75, 100].forEach(pc => {
+    const v = pc / 100;
+    g += '<line class="grid-line" x1="' + X(v) + '" y1="' + m.t + '" x2="' + X(v) + '" y2="' + (H - m.b) + '"/>'
+       + '<text class="axis-txt" x="' + X(v) + '" y="' + (H - m.b + 16) + '" text-anchor="middle">' + pc + '</text>';
+  });
+  g += '<text class="axis-txt" x="' + ((m.l + W - m.r) / 2) + '" y="' + (H - 8)
+     + '" text-anchor="middle">vulnerability rank (percentile)</text>';
+
+  const emph = p => p.quadrant === 'blind_spot';
+  pts.filter(p => !emph(p)).forEach(p => {
+    g += '<circle cx="' + X(p.svi) + '" cy="' + Y(p.value) + '" r="4" fill="' + css('--deemph')
+       + '" stroke="' + css('--surface-1') + '" stroke-width="1.5"><title>Tract ' + esc(p.name) + '</title></circle>';
+  });
+  pts.filter(emph).forEach(p => {
+    g += '<circle cx="' + X(p.svi) + '" cy="' + Y(p.value) + '" r="5" fill="' + css('--accent')
+       + '" stroke="' + css('--surface-1') + '" stroke-width="2"><title>Tract ' + esc(p.name) + '</title></circle>';
+  });
+  const sharp = pts.filter(emph).sort((a, b) => a.svi - b.svi)[0];
+  if (sharp) {
+    g += '<text class="lbl" x="' + (X(sharp.svi) + 11) + '" y="' + (Y(sharp.value) + 4)
+       + '" fill="' + css('--ink-1') + '">Tract ' + esc(sharp.name) + '</text>';
+  }
+  svg.innerHTML = g;
+
+  document.getElementById('scatterLegend').innerHTML =
+    '<span><i class="sw dot" style="background:' + css('--accent')
+    + '"></i>Severely exposed, outside the targeted band</span>'
+    + '<span><i class="sw dot" style="background:' + css('--deemph') + '"></i>Every other tract</span>';
+
+  document.getElementById('scatterCap').textContent = pts.length
+    + ' tracts. Height is hours above 28°C overnight, horizontal position is the CDC '
+    + 'vulnerability percentile. Orange dots are severely exposed yet sit outside the '
+    + 'top-quartile band a programme would target.'
+    + (sharp ? ' Tract ' + sharp.name + ' is the sharpest case: it never cooled below 28°C, '
+        + 'and ranks in the bottom ' + Math.round(sharp.svi * 100) + '% for vulnerability.' : '');
+}
+
+const BINS = [3.6, 4.3, 5.0, 5.7];
+const heatSteps = () => ['--heat-1','--heat-2','--heat-3','--heat-4','--heat-5'].map(css);
+function heatExpr() {
+  const c = heatSteps();
+  const e = ['step', ['get', 'value'], c[0]];
+  BINS.forEach((b, i) => e.push(b, c[i + 1]));
+  return e;
+}
+const map = new maplibregl.Map({
+  container: 'map',
+  style: { version: 8, sources: {},
+           layers: [{ id: 'bg', type: 'background',
+                      paint: { 'background-color': css('--surface-2') } }] },
+  center: [-112.077, 33.494], zoom: 9.6, attributionControl: false
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+async function drawMap() {
+  const gj = await fetch('/api/tracts').then(r => r.json());
+  map.addSource('t', { type: 'geojson', data: gj });
+  map.addLayer({ id: 'fill', type: 'fill', source: 't',
+                 paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.92 } });
+  map.addLayer({ id: 'line', type: 'line', source: 't',
+                 paint: { 'line-color': css('--surface-1'), 'line-width': 0.6 } });
+
+  const pop = new maplibregl.Popup({ closeButton: false, offset: 8 });
+  map.on('mousemove', 'fill', e => {
+    const p = e.features[0].properties;
+    map.getCanvas().style.cursor = 'pointer';
+    const relief = Number(p.relief_hours);
+    pop.setLngLat(e.lngLat).setHTML(
+      '<b>Tract ' + esc(p.name) + '</b>'
+      + (relief <= 0.01 ? 'No relief: above 28°C all night'
+                        : relief.toFixed(1) + ' h below 28°C')
+      + (p.population ? '<br>' + fmt(p.population) + ' people' : '')
+      + (p.svi != null ? '<br>vulnerability rank ' + Math.round(p.svi * 100) : '')
+    ).addTo(map);
+  });
+  map.on('mouseleave', 'fill', () => { map.getCanvas().style.cursor = ''; pop.remove(); });
+}
+
+// The scale legend explains the ramp, so it must not wait on a WebGL map that
+// may never paint. Drawn immediately, independent of the map.
+function drawRamp() {
+  document.getElementById('ramp').innerHTML =
+    heatSteps().map(c => '<i style="background:' + c + '"></i>').join('');
+}
+drawRamp();
+let mapBooted = null;
+function bootMap() {
+  if (!mapBooted) {
+    mapBooted = drawMap().catch(() => {
+      document.getElementById('map').innerHTML =
+        '<p class="warn" style="padding:1rem">Map unavailable. The numbers on this page are unaffected.</p>';
+    });
+  }
+  return mapBooted;
+}
+if (map.isStyleLoaded()) bootMap(); else map.once('styledata', bootMap);
+map.on('load', bootMap);
+
+async function drawMissed() {
+  const b = await fetch('/api/blindspot').then(r => r.json());
+  document.getElementById('missedIntro').textContent = b.count
+    + ' tracts are among the worst exposed in the city yet fall outside the band a '
+    + 'vulnerability-led programme would target. Together they hold ' + fmt(b.population)
+    + ' people, ' + fmt(b.over_65) + ' of them over 65. The four ranked lowest for '
+    + 'vulnerability are the least likely to be reached:';
+  const sharp = b.tracts.slice()
+    .sort((x, y) => (x.svi_percentile || 1) - (y.svi_percentile || 1)).slice(0, 4);
+  document.getElementById('missedCards').innerHTML = sharp.map(t =>
+    '<div class="card"><div class="t">Tract ' + esc(t.name) + '</div>'
+    + '<div class="big">' + (t.relief_hours <= 0.01 ? 'No relief' : t.relief_hours + ' h') + '</div>'
+    + '<p>' + fmt(t.population) + ' people, ' + fmt(t.over_65) + ' of them over 65.</p>'
+    + '<span class="rank">vulnerability rank ' + Math.round((t.svi_percentile || 0) * 100)
+    + ' of 100</span></div>').join('');
 }
 
 const SUGGESTIONS = [
@@ -180,183 +565,54 @@ const SUGGESTIONS = [
   'How solid is that number?',
   'Which missed tracts have the most people over 65?',
   'Would cool pavement help tract 1085.02?',
+  'Does this hold in Houston?'
 ];
-
-function renderChips() {
-  const box = document.getElementById('chips');
-  box.innerHTML = '';
-  SUGGESTIONS.forEach(function (t) {
-    const b = document.createElement('button');
-    b.className = 'chip';
-    b.textContent = t;
-    b.addEventListener('click', function () {
-      document.getElementById('q').value = t;
-      ask();
-    });
-    box.appendChild(b);
-  });
-}
-
 async function ask() {
-  const input = document.getElementById('q');
-  const btn = document.getElementById('ask');
+  const btn = document.getElementById('ask-btn');
   const out = document.getElementById('answer');
   const trail = document.getElementById('trail');
-  const question = input.value.trim();
+  const question = document.getElementById('q').value.trim();
   if (!question) return;
-
   btn.disabled = true;
-  out.textContent = 'Thinking. The agent reads the measurements before answering.';
+  out.textContent = 'Reading the measurements.';
   trail.hidden = true;
-
   try {
     const res = await fetch('/api/agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: question })
     });
     const body = await res.json();
-    if (!res.ok) {
-      out.textContent = body.detail || ('Request failed with status ' + res.status);
-      return;
-    }
+    if (!res.ok) { out.textContent = body.detail || ('Request failed: ' + res.status); return; }
     out.textContent = body.answer || '(no answer)';
-    const calls = (body.audit_trail || []).map(function (s) {
-      return (s.ok ? '' : 'FAILED ') + s.tool +
-             (Object.keys(s.args || {}).length ? ' ' + JSON.stringify(s.args) : '');
-    });
-    trail.innerHTML = '<b>Read ' + calls.length + ' source' + (calls.length === 1 ? '' : 's') +
-      (body.consulted_limits ? ', including the stated limits' : '') + ':</b><br>' +
-      calls.join('<br>');
+    const calls = (body.audit_trail || []).map(s => s.tool);
+    trail.innerHTML = '<b>Read ' + calls.length + ' source' + (calls.length === 1 ? '' : 's')
+      + (body.consulted_limits ? ', including the stated limits' : '') + ':</b> ' + esc(calls.join(', '));
     trail.hidden = calls.length === 0;
   } catch (e) {
-    out.textContent = 'Could not reach the agent: ' + (e && e.message ? e.message : e);
-  } finally {
-    btn.disabled = false;
-  }
+    out.textContent = 'Could not reach the analysis: ' + (e && e.message ? e.message : e);
+  } finally { btn.disabled = false; }
 }
+document.getElementById('ask-btn').addEventListener('click', ask);
+document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+document.getElementById('chips').innerHTML =
+  SUGGESTIONS.map(s => '<button class="chip">' + esc(s) + '</button>').join('');
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+  document.getElementById('q').value = c.textContent;
+  ask();
+}));
 
-async function renderPanel() {
-  try {
-    const both = await Promise.all([
-      fetch('/api/summary').then(r => r.json()),
-      fetch('/api/divergence').then(r => r.json())
-    ]);
-    SUMMARY = both[0]; DIVERGENCE = both[1];
-  } catch (e) {
-    warn('Could not load summary data: ' + (e && e.message ? e.message : e));
-  }
-  renderStats();
-  renderLegend();
-}
-
-// ---- 2. Map on a blank style, so it reaches 'load' with no network at all. ----
-const map = new maplibregl.Map({
-  container: 'map',
-  style: {
-    version: 8,
-    sources: {},
-    layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e8eef1' } }]
-  },
-  center: [-112.077, 33.494],
-  zoom: 10.4,
-  attributionControl: false
+// Each block is independent: one failure must not blank the page.
+loadHeadline().catch(e => console.error('headline', e));
+drawCurve().catch(e => console.error('curve', e));
+drawScatter().catch(e => {
+  console.error('scatter', e);
+  document.getElementById('scatterCap').textContent = 'Scatter unavailable.';
 });
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-
-async function renderTracts() {
-  const gj = await fetch('/api/tracts').then(r => r.json());
-  map.addSource('tracts', { type: 'geojson', data: gj });
-  map.addLayer({
-    id: 'fill', type: 'fill', source: 'tracts',
-    paint: { 'fill-color': colorExpr(), 'fill-opacity': 0.8 }
-  });
-  map.addLayer({
-    id: 'line', type: 'line', source: 'tracts',
-    paint: { 'line-color': '#0e2129', 'line-width': 0.4, 'line-opacity': 0.45 }
-  });
-
-  const popup = new maplibregl.Popup({ closeButton: false, offset: 8 });
-  map.on('mousemove', 'fill', e => {
-    const p = e.features[0].properties;
-    map.getCanvas().style.cursor = 'pointer';
-    popup.setLngLat(e.lngLat).setHTML(
-      `<b>Tract ${p.name}</b>
-       ${Number(p.value).toFixed(2)} h above threshold<br>
-       ${p.svi != null ? 'SVI ' + Number(p.svi).toFixed(2) + ' pctile<br>' : ''}${p.population ? Number(p.population).toLocaleString() + ' people, ' + Number(p.over_65).toLocaleString() + ' aged 65+<br>' : ''}<span style="color:#64808c">${(p.coverage * 100).toFixed(0)}% measured · ${p.n_tiles} tiles</span>`
-    ).addTo(map);
-  });
-  map.on('mouseleave', 'fill', () => {
-    map.getCanvas().style.cursor = '';
-    popup.remove();
-  });
-  return gj.features.length;
-}
-
-// ---- 3. Basemap is a best-effort enhancement, added underneath and allowed to fail. ----
-function tryBasemap() {
-  try {
-    map.addSource('osm', {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors'
-    });
-    map.addLayer({ id: 'osm', type: 'raster', source: 'osm',
-                   paint: { 'raster-opacity': 0.5 } }, 'fill');
-  } catch (e) {
-    warn('Basemap unavailable. Tract data is unaffected.');
-  }
-}
-
-renderPanel();
-
-// Gate on style parse, not on first paint. `map.on('load')` waits for a render,
-// which never happens if the tab is backgrounded or throttled -- the data would
-// then silently never appear. `styledata` fires as soon as the style is usable.
-//
-// Both hooks can fire, so boot must be single-flight. A plain `if (ready) return`
-// guard does not work: the flag is only set *after* an await, so a second call
-// slips past it, re-runs addSource('tracts'), and throws "source already exists"
-// -- which surfaced as a bogus "could not load" banner over a perfectly good map.
-// Latching the promise synchronously is what actually makes it idempotent.
-let bootPromise = null;
-
-async function doBoot() {
-  try {
-    window.__tracts = await renderTracts();
-  } catch (e) {
-    console.error('renderTracts failed:', e);
-    warn('Tract data unavailable: ' + (e && e.message ? e.message : e));
-    return;
-  }
-  tryBasemap();
-  applyView();
-  window.__ready = true;
-}
-
-function boot() {
-  if (!bootPromise) bootPromise = doBoot();
-  return bootPromise;
-}
-
-document.getElementById('ask').addEventListener('click', ask);
-document.getElementById('q').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') ask();
-});
-renderChips();
-
-document.querySelectorAll('.tab').forEach(function (btn) {
-  btn.addEventListener('click', function () {
-    document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('on', b === btn); });
-    VIEW = btn.dataset.view;
-    applyView();
-  });
-});
-
-if (map.isStyleLoaded()) boot();
-else map.once('styledata', boot);
-map.on('load', boot);
+drawMissed().catch(e => console.error('missed', e));
+fetch('/health').then(r => r.json()).then(h => {
+  document.getElementById('foot').textContent =
+    ' ' + h.tracts + ' tracts served from a precomputed layer, so this page never waits on an API.';
+}).catch(() => {});
 </script>
 </body>
 </html>

@@ -61,3 +61,19 @@ a specific tool call and used a refusal regex that missed "I do not have data fo
 Houston". It failed a perfectly good refusal. A test that fails correct behaviour
 is worse than no test, because it teaches you to ignore failures. If a case goes
 red, check the answer before changing the agent.
+
+## Flakiness
+
+A case that passes sometimes is worse than one that fails, because it trains you
+to shrug at red. Two cases have been rewritten for this reason rather than for
+model behaviour:
+
+- `bait_other_city` required a specific tool call and used a refusal regex that
+  missed "I do not have data for Houston", so it failed a correct refusal.
+- `overview` asked for "headline numbers in two sentences" and then required two
+  specific figures, passing or failing depending on which the model chose to
+  mention. It now asks for exactly what it checks.
+
+The guardrail cases, the baits, have been stable across every run. Those are the
+ones that matter; if one of them ever goes intermittent, treat it as a real
+finding about the prompt rather than as noise to be smoothed over.

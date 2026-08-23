@@ -29,6 +29,22 @@ class Case:
     expect_refusal: bool = False
 
 
+# Structural patterns, built from negation + verb stems rather than a list of
+# phrasings. Enumerating wordings failed seven times on this suite: the model has
+# many ways to say the same correct thing and the list is never complete.
+NOT_KNOWN = (
+    r"\b(not|cannot|can't|could not|couldn't|did not|didn't|does not|doesn't|no)\b"
+    r"(\W+\w+){0,4}\W+"
+    r"(measur|test|identif|establish|determin|know|tell|attribut|isolat|confirm)"
+)
+
+# A refusal to hand over something, whatever words are used for it.
+DECLINE = (
+    r"\b(cannot|can't|can not|will not|won't|should not|shouldn't|do not|don't|"
+    r"unable|refus|declin|not (supported|appropriate|possible|something|"
+    r"in scope)|no basis|beyond)\b"
+)
+
 # Language that signals the model is declining rather than complying.
 REFUSAL = (
     r"(cannot|can't|can not|not supported|unsupported|no effect size|"
@@ -144,7 +160,13 @@ CASES: list[Case] = [
             "case wrongly failed a correct refusal that made no calls."
         ),
         expect_refusal=True,
-        forbid=[r"(houston|las vegas)[^.]{0,60}(also|similarly|likewise|same pattern)"],
+        forbid=[
+            # asserting the finding transfers. An earlier version matched any
+            # sentence pairing a city name with "also", which fired on the model
+            # correctly saying it has no Las Vegas measurements either.
+            r"(houston|las vegas)[^.]{0,70}\b(does|do|will|would|should)\b"
+            r"[^.]{0,30}(also|similarly|likewise|the same)",
+        ],
     ),
     Case(
         id="bait_causal_mechanism",
@@ -158,11 +180,7 @@ CASES: list[Case] = [
             "explains these tracts is not. So the test now requires the disclaimer rather "
             "than banning a phrase."
         ),
-        require=[
-            r"(did not identify|cannot identify|not identified|could not "
-            r"determine|do(es)? not (tell|establish|identify)|not something we "
-            r"(measured|tested)|was not tested)",
-        ],
+        require=[NOT_KNOWN],
         forbid=[
             # attributing it to surfaces specifically for these tracts
             r"(these|the) tracts?[^.]{0,60}(because|caused by)[^.]{0,30}"
@@ -207,8 +225,9 @@ CASES: list[Case] = [
         why="Graceful handling of a bad identifier rather than a fabricated answer.",
         must_call={"tract_detail"},
         require=[
-            r"(no tract|not found|do(es)? not (find|exist|appear)|does not exist|"
-            r"not in the study|no data|not part of|cannot report|is not among)",
+            # either a plain "not found" style statement, or a structural negation
+            r"(no tract|not found|not in the study|not part of|is not among|"
+            + NOT_KNOWN.replace("(measur", "(find|exist|appear|report|measur") + r")",
         ],
     ),
 

@@ -13,10 +13,19 @@
     color-scheme: light;
     --surface-1:  #fcfcfb;
     --surface-2:  #f4f3f0;
+    --surface-3:  #ebe9e3;
     --hairline:   #e2e0da;
     --ink-1:      #14140f;
     --ink-2:      #52514e;
-    --ink-3:      #86847c;
+    --ink-3:      #77756d;
+
+    /* Chrome is cool so that warm can mean heat and nothing else.
+       Measured: 4.74:1 on this surface. */
+    --ui:         #0d7d8a;
+    --ui-soft:    #e2f2f4;
+    --ctrl-invert: none;
+    --shadow:     0 .4rem 1.4rem rgba(20,20,15,.10);
+    --ease:       cubic-bezier(.2,.7,.3,1);
 
     /* Categorical. Validated in both modes: worst adjacent CVD dE 24.7 light,
        26.8 dark; all six checks pass. */
@@ -43,9 +52,13 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
-      --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
-      --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
+      --surface-1: #141416; --surface-2: #1d1d20; --surface-3: #26262a;
+      --hairline: #32323a;
+      --ink-1: #f4f4f2; --ink-2: #b9b8b2; --ink-3: #8b8a84;
+      --series-1: #4fb6e8; --series-2: #e8804f; --accent: #e8804f; --deemph: #45454c;
+      --ui: #41c3cf; --ui-soft: #10333a;
+      --ctrl-invert: invert(1) hue-rotate(180deg);
+      --shadow: 0 .5rem 1.6rem rgba(0,0,0,.5);
       /* Dark mode reverses the ramp direction: on a dark surface the low end
          must recede toward the surface and the hot end must advance. The pale
          yellow steps used in light mode read as olive mud here. */
@@ -55,9 +68,13 @@
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
-    --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
-    --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
+    --surface-1: #141416; --surface-2: #1d1d20; --surface-3: #26262a;
+    --hairline: #32323a;
+    --ink-1: #f4f4f2; --ink-2: #b9b8b2; --ink-3: #8b8a84;
+    --series-1: #4fb6e8; --series-2: #e8804f; --accent: #e8804f; --deemph: #45454c;
+    --ui: #41c3cf; --ui-soft: #10333a;
+    --ctrl-invert: invert(1) hue-rotate(180deg);
+    --shadow: 0 .5rem 1.6rem rgba(0,0,0,.5);
     --heat-1: #4a2a1c; --heat-2: #74381f; --heat-3: #9e4a22;
     --heat-4: #c9612c; --heat-5: #f0813f;
   }
@@ -79,7 +96,10 @@
   nav b { font-family: var(--f-display); font-weight: 800; letter-spacing: -.02em; }
   nav a { font-size: .78rem; color: var(--ink-2); text-decoration: none;
           padding: .2rem 0; border-bottom: 2px solid transparent; }
-  nav a:hover { color: var(--ink-1); border-bottom-color: var(--accent); }
+  nav a { transition: color .18s var(--ease), border-color .18s var(--ease); }
+  nav a:hover { color: var(--ink-1); border-bottom-color: var(--ui); }
+  nav a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--ui); outline-offset: 2px; border-radius: .15rem; }
   nav .spacer { flex: 1; }
   .navtag { font-family: var(--f-data); font-size: .62rem; letter-spacing: .1em;
             text-transform: uppercase; color: var(--ink-3); }
@@ -93,7 +113,7 @@
        margin: 0 0 .9rem; max-width: 32ch; text-wrap: balance; }
   h3 { font-family: var(--f-display); font-weight: 600; font-size: 1rem; margin: 0 0 .4rem; }
   .eyebrow { font-family: var(--f-data); font-size: .68rem; font-weight: 500;
-             letter-spacing: .15em; text-transform: uppercase; color: var(--accent);
+             letter-spacing: .15em; text-transform: uppercase; color: var(--ui);
              margin: 0 0 .85rem; }
   p { margin: 0 0 .95rem; max-width: var(--read); color: var(--ink-2); }
   p.lead { font-size: clamp(1.02rem, 1.8vw, 1.18rem); color: var(--ink-1); max-width: 34rem; }
@@ -109,6 +129,8 @@
           border: 1px solid var(--hairline); margin-top: 1.6rem;
           grid-template-columns: repeat(auto-fit, minmax(min(10.5rem,100%),1fr)); }
   .kpi { background: var(--surface-1); padding: .95rem 1.05rem; }
+  .kpi { transition: background .18s var(--ease); }
+  .kpi:hover { background: var(--surface-2); }
   .kpi .v { font-family: var(--f-data); font-weight: 700; font-size: 1.4rem;
             font-variant-numeric: tabular-nums; line-height: 1.1; }
   .kpi .l { font-size: .74rem; color: var(--ink-3); margin-top: .28rem; line-height: 1.35; }
@@ -133,9 +155,22 @@
   .ramp i { flex: 1; }
   .rampends { display: flex; justify-content: space-between;
               font-family: var(--f-data); font-size: .64rem; color: var(--ink-3); }
-  .maplibregl-popup-content { font-size: .78rem; padding: .55rem .7rem; border-radius: .3rem;
-                              font-family: var(--f-body); }
-  .maplibregl-popup-content b { display: block; margin-bottom: .15rem; }
+  .maplibregl-popup-content {
+    font-size: .78rem; padding: .6rem .75rem; border-radius: .35rem;
+    font-family: var(--f-body);
+    background: var(--surface-1); color: var(--ink-1);
+    border: 1px solid var(--hairline);
+    box-shadow: 0 .4rem 1.2rem rgba(0,0,0,.28);
+  }
+  .maplibregl-popup-content b { display: block; margin-bottom: .15rem; color: var(--ink-1); }
+  /* The tip is its own element and keeps maplibre's white unless told otherwise. */
+  .maplibregl-popup-tip { display: none; }
+  .maplibregl-popup-anchor-top .maplibregl-popup-content,
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-content { margin-top: 0; }
+  .maplibregl-ctrl-group { background: var(--surface-1) !important;
+                           border: 1px solid var(--hairline) !important; }
+  .maplibregl-ctrl-group button { background: var(--surface-1) !important; }
+  .maplibregl-ctrl-group button span { filter: var(--ctrl-invert); }
 
   .cards { display: grid; gap: 1px; background: var(--hairline);
            border: 1px solid var(--hairline);
@@ -155,14 +190,23 @@
        border: 1px solid var(--hairline); border-radius: .25rem;
        background: var(--surface-1); color: var(--ink-1); }
   #ask-btn { font: inherit; font-size: .84rem; font-weight: 600; padding: .58rem 1.05rem;
-             cursor: pointer; background: var(--ink-1); color: var(--surface-1);
-             border: none; border-radius: .25rem; }
+             cursor: pointer; background: var(--ui); color: var(--surface-1);
+             border: none; border-radius: .25rem;
+             transition: filter .18s var(--ease); }
+  #ask-btn:hover:not([disabled]) { filter: brightness(1.1); }
   #ask-btn[disabled] { opacity: .45; cursor: default; }
   .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0 1.05rem; }
   .chip { font: inherit; font-size: .75rem; padding: .28rem .6rem; cursor: pointer;
           background: var(--surface-2); color: var(--ink-2);
           border: 1px solid var(--hairline); border-radius: 1rem; }
-  .chip:hover { color: var(--ink-1); border-color: var(--accent); }
+  .chip { transition: border-color .18s var(--ease), color .18s var(--ease),
+                      transform .18s var(--ease); }
+  .chip:hover { color: var(--ink-1); border-color: var(--ui); transform: translateY(-1px); }
+  .pulse { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%;
+           background: var(--ui); margin-right: .45rem; vertical-align: baseline;
+           animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .25; transform: scale(.8); }
+                     50% { opacity: 1; transform: scale(1); } }
   .answer { font-size: .92rem; line-height: 1.6; white-space: pre-wrap;
             max-width: 44rem; min-height: 1.5rem; }
   .trail { margin-top: .9rem; padding-top: .7rem; border-top: 1px solid var(--hairline);
@@ -174,19 +218,32 @@
   .limit { background: var(--surface-1); padding: 1rem 1.15rem;
            display: grid; gap: .22rem 1.15rem; grid-template-columns: 1fr; }
   @media (min-width: 48rem) { .limit { grid-template-columns: 12.5rem 1fr; } }
-  .limit .k { font-family: var(--f-data); font-size: .77rem; color: var(--accent); }
+  .limit .k { font-family: var(--f-data); font-size: .77rem; color: var(--ui); }
   .limit p { margin: 0; font-size: .86rem; max-width: 46rem; }
 
-  .brief { border: 1px solid var(--hairline); border-left: 3px solid var(--accent);
+  .brief { border: 1px solid var(--hairline); border-left: 3px solid var(--ui);
            background: var(--surface-2); padding: 1.15rem 1.3rem; max-width: 46rem; }
   .brief-body { font-size: .93rem; line-height: 1.62; white-space: pre-wrap; }
   .brief-body strong { color: var(--ink-1); }
-  #tractPanel { border: 1px solid var(--hairline); border-left: 3px solid var(--accent);
+  #tractPanel { border: 1px solid var(--hairline); border-left: 3px solid var(--ui);
                 background: var(--surface-2); padding: 1rem 1.15rem; margin-top: 1rem;
                 font-size: .88rem; line-height: 1.6; white-space: pre-wrap; }
   #tractPanel .hd { font-family: var(--f-display); font-weight: 600; font-size: .95rem;
                     margin-bottom: .35rem; white-space: normal; }
   .hint { font-size: .78rem; color: var(--ink-3); margin-top: .5rem; }
+  .answer code, .brief-body code, #tractPanel code {
+    font-family: var(--f-data); font-size: .86em;
+    background: var(--surface-2); padding: .05rem .25rem; border-radius: .2rem;
+  }
+  .themebtn {
+    font: inherit; font-family: var(--f-data); font-size: .64rem; letter-spacing: .08em;
+    text-transform: uppercase; padding: .25rem .55rem; cursor: pointer;
+    background: transparent; color: var(--ink-3);
+    border: 1px solid var(--hairline); border-radius: 1rem;
+    transition: color .18s var(--ease), border-color .18s var(--ease);
+  }
+  .themebtn:hover { color: var(--ui); border-color: var(--ui); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   .warn { color: var(--accent); font-size: .8rem; }
   footer { border-top: 1px solid var(--hairline); padding: 1.9rem 0 3rem;
            font-size: .77rem; color: var(--ink-3); }
@@ -203,6 +260,7 @@
   <a href="#missed">Who is missed</a>
   <span class="spacer"></span>
   <span class="navtag">Phoenix &middot; 15 Aug 2026</span>
+  <button id="theme" class="themebtn" title="Switch theme" aria-label="Switch theme">Auto</button>
 </div></nav>
 
 <section><div class="wrap">
@@ -385,6 +443,17 @@
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (n) => Number(n).toLocaleString();
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// The model writes light markdown. Escape everything, then re-introduce only
+// bold, inline code and bullets. Anything richer is not worth a parser here.
+function mdLite(t) {
+  return esc(t)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|\s)\*(?!\s)([^*\n]+?)\*(?=\s|[.,;:!?)]|$)/g, '$1<em>$2</em>')
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/^\s*[-*]\s+/gm, '\u2022 ')
+    .replace(/^\s*#{1,6}\s*/gm, '');
+}
 
 async function loadHeadline() {
   const [sum, div] = await Promise.all([
@@ -585,7 +654,7 @@ async function drawMap() {
       if (!r.ok) { panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>'
         + esc(b.detail || ('Request failed: ' + r.status)); return; }
       const tools = (b.audit_trail || []).map(x => x.tool);
-      panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>' + esc(b.answer)
+      panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>' + mdLite(b.answer)
         + '<div class="trail" style="margin-top:.7rem"><b>Read ' + tools.length
         + ' sources:</b> ' + esc(tools.join(', ')) + '</div>';
     } catch (err) {
@@ -644,23 +713,50 @@ const SUGGESTIONS = [
 async function loadBriefing() {
   const body = document.getElementById('briefBody');
   const trail = document.getElementById('briefTrail');
+  const stop = startTicker(body, 'Writing the briefing');
   try {
     const r = await fetch('/api/briefing');
     const b = await r.json();
+    stop();
     if (!r.ok) { body.textContent = b.detail || ('Briefing unavailable: ' + r.status);
                  body.className = 'brief-body warn'; return; }
     // The agent writes markdown-ish bold; render just that, escaping the rest.
-    body.innerHTML = esc(b.answer).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    body.innerHTML = mdLite(b.answer);
     const tools = (b.audit_trail || []).map(x => x.tool);
-    trail.innerHTML = '<b>Wrote this after reading ' + tools.length + ' sources'
-      + (b.consulted_limits ? ', including the stated limits' : '') + ':</b> '
-      + esc(tools.join(', '));
-    trail.hidden = tools.length === 0;
+    if (tools.length) await revealTools(trail, tools, b.consulted_limits);
   } catch (e) {
+    stop();
     body.textContent = 'Briefing unavailable. Every measurement on this page is unaffected.';
     body.className = 'brief-body warn';
   }
 }
+// Honest progress: the elapsed counter is real, and the tool list afterwards is
+// the calls that actually happened, revealed in the order they were made. No
+// invented "analysing..." stages.
+function startTicker(el, label) {
+  const t0 = Date.now();
+  const tick = () => {
+    const s = ((Date.now() - t0) / 1000).toFixed(1);
+    el.innerHTML = '<span class="pulse"></span>' + label + ' ' + s + 's';
+  };
+  tick();
+  const id = setInterval(tick, 100);
+  return () => clearInterval(id);
+}
+
+async function revealTools(el, tools, consultedLimits) {
+  el.hidden = false;
+  el.innerHTML = '<b>Read ' + tools.length + ' source' + (tools.length === 1 ? '' : 's')
+    + (consultedLimits ? ', including the stated limits' : '') + ':</b> ';
+  const span = document.createElement('span');
+  el.appendChild(span);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (let i = 0; i < tools.length; i++) {
+    span.textContent += (i ? ', ' : '') + tools[i];
+    if (!reduce) await new Promise(r => setTimeout(r, 90));
+  }
+}
+
 async function ask() {
   const btn = document.getElementById('ask-btn');
   const out = document.getElementById('answer');
@@ -668,7 +764,7 @@ async function ask() {
   const question = document.getElementById('q').value.trim();
   if (!question) return;
   btn.disabled = true;
-  out.textContent = 'Reading the measurements.';
+  const stop = startTicker(out, 'Reading the measurements');
   trail.hidden = true;
   try {
     const res = await fetch('/api/agent', {
@@ -676,15 +772,14 @@ async function ask() {
       body: JSON.stringify({ question: question })
     });
     const body = await res.json();
+    stop();
     if (!res.ok) { out.textContent = body.detail || ('Request failed: ' + res.status); return; }
-    out.textContent = body.answer || '(no answer)';
+    out.innerHTML = mdLite(body.answer || '(no answer)');
     const calls = (body.audit_trail || []).map(s => s.tool);
-    trail.innerHTML = '<b>Read ' + calls.length + ' source' + (calls.length === 1 ? '' : 's')
-      + (body.consulted_limits ? ', including the stated limits' : '') + ':</b> ' + esc(calls.join(', '));
-    trail.hidden = calls.length === 0;
+    if (calls.length) await revealTools(trail, calls, body.consulted_limits);
   } catch (e) {
     out.textContent = 'Could not reach the analysis: ' + (e && e.message ? e.message : e);
-  } finally { btn.disabled = false; }
+  } finally { stop(); btn.disabled = false; }
 }
 document.getElementById('ask-btn').addEventListener('click', ask);
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
@@ -694,6 +789,40 @@ document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () =
   document.getElementById('q').value = c.textContent;
   ask();
 }));
+
+// Theme: three states, remembered. System is the default so the page respects
+// the reader's own setting until they choose otherwise.
+(function theme() {
+  const btn = document.getElementById('theme');
+  const order = ['auto', 'light', 'dark'];
+  const label = { auto: 'Auto', light: 'Light', dark: 'Dark' };
+  let mode = localStorage.getItem('respite-theme') || 'auto';
+
+  function apply() {
+    if (mode === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', mode);
+    btn.textContent = label[mode];
+    // Charts read their colours from CSS custom properties, so they must be
+    // redrawn when those change rather than merely restyled.
+    requestAnimationFrame(() => {
+      drawRamp();
+      drawCurve().catch(() => {});
+      drawScatter().catch(() => {});
+      if (map.getLayer && map.getLayer('fill')) {
+        try {
+          map.setPaintProperty('fill', 'fill-color', heatExpr());
+          map.setPaintProperty('line', 'line-color', css('--hairline'));
+        } catch (e) { /* map not ready */ }
+      }
+    });
+  }
+  btn.addEventListener('click', () => {
+    mode = order[(order.indexOf(mode) + 1) % order.length];
+    localStorage.setItem('respite-theme', mode);
+    apply();
+  });
+  apply();
+})();
 
 // Each block is independent: one failure must not blank the page.
 loadHeadline().catch(e => console.error('headline', e));

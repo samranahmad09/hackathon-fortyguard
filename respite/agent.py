@@ -82,8 +82,16 @@ Rules you must follow:
 
 Write for a busy official: plain sentences, concrete numbers, no throat-clearing.
 
-Style: never use em dashes. Use commas, colons, or separate sentences instead.
-Round numbers sensibly and always name the tract behind a figure.
+Style rules:
+
+* Never use em dashes. Use commas, colons, or separate sentences instead.
+* Round numbers sensibly and always name the tract behind a figure.
+* Start with the answer. No preamble, no "here is the plain-text version", no
+  describing what you are about to do, no restating the question.
+* Bold at most two or three figures in an answer, the ones that carry it.
+  Bolding most of a paragraph makes all of it read as unemphasised.
+* Simple bullet lists are fine. No headings, no nested lists, no table wider
+  than four columns.
 """
 
 

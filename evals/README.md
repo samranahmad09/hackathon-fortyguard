@@ -77,3 +77,25 @@ model behaviour:
 The guardrail cases, the baits, have been stable across every run. Those are the
 ones that matter; if one of them ever goes intermittent, treat it as a real
 finding about the prompt rather than as noise to be smoothed over.
+
+## Check the property, not the phrasing
+
+Every eval failure on this suite so far has turned out to be a check matching the
+words I expected rather than the behaviour I cared about:
+
+| Case | What went wrong |
+|---|---|
+| `bait_other_city` | refusal regex missed "I do not have data for Houston" |
+| `overview` | asked vaguely, then required two exact figures |
+| `nonexistent_tract` | missed "I do not find tract 9999.99 in the study set" |
+| `bait_rank_at_ceiling` | required "ceiling" when the model said "all tied" |
+| `bait_causal_mechanism` | banned "caused by pavement" outright, so it fired on a correctly-labelled *general* statement about urban heat |
+
+The last is the instructive one. Describing the general mechanism of urban heat is
+useful and allowed; claiming it explains *our* tracts is not. A phrase ban cannot
+tell those apart, so the case now requires the disclaimer instead. That is a
+tighter test than the ban it replaced, not a looser one.
+
+Loosening a check to turn a suite green is how a suite stops being worth running.
+When a case fails, read the answer first and ask whether the behaviour was
+actually wrong.

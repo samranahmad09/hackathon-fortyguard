@@ -40,6 +40,8 @@ app = FastAPI(
 )
 
 _layer_cache: dict | None = None
+_briefing_cache: dict | None = None
+_tract_cache: dict[str, dict] = {}
 
 
 def layer() -> dict:
@@ -204,6 +206,80 @@ def curves(pair: bool = True) -> dict:
     }
 
 
+def _agent_or_503():
+    """Shared guard so every agent-backed endpoint fails the same way."""
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail=("No OPENAI_API_KEY configured on the server. The map, the charts and "
+                    "every measurement endpoint work without it; only the agent needs it."),
+        )
+    from respite.agent import openai_model, run
+    return run, openai_model()
+
+
+BRIEFING_PROMPT = (
+    "Brief a city official who has never seen this data and has two minutes. "
+    "Cover, in this order and in plain language: what was measured and what the "
+    "numbers mean, why overnight heat is the thing to care about, the single most "
+    "important finding, and what it implies for how heat response is targeted. "
+    "Explain any term a non-specialist would not know. Be specific with tract "
+    "numbers and figures. Do not exceed roughly 300 words."
+)
+
+
+@app.get("/api/briefing")
+def briefing(refresh: bool = False) -> dict:
+    """A standing briefing the agent writes without being asked.
+
+    Generated on first request and cached, so repeated visits cost nothing and
+    the wording stays stable between them. ``refresh=1`` forces a rewrite.
+    """
+    global _briefing_cache
+    if _briefing_cache is not None and not refresh:
+        return {**_briefing_cache, "cached": True}
+
+    run, model = _agent_or_503()
+    try:
+        brief = run(BRIEFING_PROMPT, model)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+
+    _briefing_cache = {
+        **brief.to_dict(),
+        "prompt": BRIEFING_PROMPT,
+        "unprompted": True,
+    }
+    return {**_briefing_cache, "cached": False}
+
+
+@app.get("/api/explain/{geoid}")
+def explain(geoid: str) -> dict:
+    """Explain one tract in plain language, triggered by a click rather than a question."""
+    if geoid in _tract_cache:
+        return {**_tract_cache[geoid], "cached": True}
+
+    check = rtools.tract_detail(geoid)
+    if check.get("error"):
+        raise HTTPException(status_code=404, detail=check["error"])
+
+    run, model = _agent_or_503()
+    prompt = (
+        f"Explain tract {geoid} to someone with no background in this data. Say how its "
+        "night compared with the rest of the city, who lives there, whether a "
+        "vulnerability-led programme would reach it, and what that means in practice. "
+        "Four short paragraphs at most, plain language, no jargon left unexplained."
+    )
+    try:
+        brief = run(prompt, model)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+
+    _tract_cache[geoid] = {**brief.to_dict(), "geoid": geoid,
+                           "name": check.get("name")}
+    return {**_tract_cache[geoid], "cached": False}
+
+
 @app.post("/api/agent")
 def agent(payload: dict) -> dict:
     """Ask the agent a question. Returns its answer plus the full audit trail.
@@ -218,17 +294,9 @@ def agent(payload: dict) -> dict:
     if not question:
         raise HTTPException(status_code=422, detail="Provide a 'question' field.")
 
-    if not os.getenv("OPENAI_API_KEY"):
-        raise HTTPException(
-            status_code=503,
-            detail=("No OPENAI_API_KEY configured on the server. The map and all "
-                    "measurement endpoints work without it; only the agent needs it."),
-        )
-
-    from respite.agent import openai_model, run
-
+    run, model = _agent_or_503()
     try:
-        brief = run(question, openai_model())
+        brief = run(question, model)
     except Exception as exc:  # noqa: BLE001 - surface provider failures as 502
         raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
     return brief.to_dict()

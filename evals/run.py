@@ -36,6 +36,8 @@ class Result:
     failures: list[str] = field(default_factory=list)
     error: str | None = None
     seconds: float = 0.0
+    passes: int = 1
+    attempts: int = 1
 
     @property
     def passed(self) -> bool:
@@ -82,21 +84,42 @@ def run_case(case: Case, model) -> Result:
     )
 
 
-def run_suite(model_name: str, cases: list[Case], verbose: bool) -> list[Result]:
+def run_suite(model_name: str, cases: list[Case], verbose: bool,
+              repeat: int = 1) -> list[Result]:
+    """Run every case ``repeat`` times.
+
+    The model is stochastic, so one run cannot tell a regression from variance.
+    With repeat > 1 the worst run is reported as the case's result and the pass
+    rate is shown, which makes a flaky guardrail visible rather than a surprise
+    for whoever next runs the suite.
+    """
     model = openai_model(model=model_name)
     results: list[Result] = []
-    print(f"\n{'=' * 78}\nMODEL: {model_name}   ({len(cases)} cases)\n{'=' * 78}")
+    label = f"{len(cases)} cases" + (f" x{repeat}" if repeat > 1 else "")
+    print(f"\n{'=' * 78}\nMODEL: {model_name}   ({label})\n{'=' * 78}")
     for c in cases:
-        r = run_case(c, model)
-        results.append(r)
-        mark = "pass" if r.passed else "FAIL"
-        print(f"  [{mark}] {c.id:28} {r.seconds:5.1f}s  tools={len(r.tools)}")
-        if r.error:
-            print(f"          error: {r.error[:140]}")
-        for f in r.failures:
+        runs = [run_case(c, model) for _ in range(max(1, repeat))]
+        passes = sum(1 for x in runs if x.passed)
+        # report the worst run, so a single bad outcome cannot hide behind a good one
+        worst = next((x for x in runs if not x.passed), runs[0])
+        worst.passes = passes
+        worst.attempts = len(runs)
+        results.append(worst)
+
+        if passes == len(runs):
+            mark = "pass"
+        elif passes == 0:
+            mark = "FAIL"
+        else:
+            mark = "FLAKY"
+        rate = "" if repeat == 1 else f"  {passes}/{len(runs)}"
+        print(f"  [{mark:5}] {c.id:28} {worst.seconds:5.1f}s  tools={len(worst.tools)}{rate}")
+        if worst.error:
+            print(f"          error: {worst.error[:140]}")
+        for f in worst.failures:
             print(f"          {f[:150]}")
-        if verbose and r.answer:
-            print("          " + r.answer.replace("\n", "\n          ")[:600])
+        if verbose and worst.answer:
+            print("          " + worst.answer.replace("\n", "\n          ")[:600])
     return results
 
 
@@ -105,6 +128,8 @@ def main() -> int:
     ap.add_argument("--model", default=None)
     ap.add_argument("--compare", nargs="+", default=None)
     ap.add_argument("--case", default=None, help="run one case by id")
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="run each case N times and report the pass rate")
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--json", default=None, help="write results to this path")
     args = ap.parse_args()
@@ -121,14 +146,20 @@ def main() -> int:
     models = args.compare or [args.model or "gpt-4.1"]
     all_results: dict[str, list[Result]] = {}
     for m in models:
-        all_results[m] = run_suite(m, cases, args.verbose)
+        all_results[m] = run_suite(m, cases, args.verbose, args.repeat)
 
     print(f"\n{'=' * 78}\nSUMMARY\n{'=' * 78}")
-    print(f"  {'model':22} {'pass':>6} {'fail':>6} {'err':>5} {'total s':>9}")
+    print(f"  {'model':22} {'clean':>6} {'flaky':>6} {'fail':>6} {'err':>5} {'total s':>9}")
     for m, rs in all_results.items():
-        p = sum(1 for r in rs if r.passed)
+        clean = sum(1 for r in rs if r.passes == r.attempts)
+        flaky = sum(1 for r in rs if 0 < r.passes < r.attempts)
+        failed = sum(1 for r in rs if r.passes == 0)
         e = sum(1 for r in rs if r.error)
-        print(f"  {m:22} {p:>6} {len(rs) - p:>6} {e:>5} {sum(r.seconds for r in rs):>9.1f}")
+        print(f"  {m:22} {clean:>6} {flaky:>6} {failed:>6} {e:>5} "
+              f"{sum(r.seconds for r in rs):>9.1f}")
+    if any(0 < r.passes < r.attempts for rs in all_results.values() for r in rs):
+        print("\n  A flaky case is a finding, not noise. Read the answer before "
+              "changing anything.")
 
     if len(all_results) > 1:
         print("\n  per-case comparison (. = pass, X = fail, E = error)")

@@ -46,8 +46,11 @@
       --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
       --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
       --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
-      --heat-1: #5c4a1f; --heat-2: #8a6520; --heat-3: #b87a2a;
-      --heat-4: #cf6427; --heat-5: #e0533a;
+      /* Dark mode reverses the ramp direction: on a dark surface the low end
+         must recede toward the surface and the hot end must advance. The pale
+         yellow steps used in light mode read as olive mud here. */
+      --heat-1: #4a2a1c; --heat-2: #74381f; --heat-3: #9e4a22;
+      --heat-4: #c9612c; --heat-5: #f0813f;
     }
   }
   :root[data-theme="dark"] {
@@ -55,8 +58,8 @@
     --surface-1: #1a1a19; --surface-2: #232322; --hairline: #35342f;
     --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #8d8c83;
     --series-1: #3987e5; --series-2: #d95926; --accent: #d95926; --deemph: #4a4944;
-    --heat-1: #5c4a1f; --heat-2: #8a6520; --heat-3: #b87a2a;
-    --heat-4: #cf6427; --heat-5: #e0533a;
+    --heat-1: #4a2a1c; --heat-2: #74381f; --heat-3: #9e4a22;
+    --heat-4: #c9612c; --heat-5: #f0813f;
   }
 
   *,*::before,*::after { box-sizing: border-box; }
@@ -174,6 +177,16 @@
   .limit .k { font-family: var(--f-data); font-size: .77rem; color: var(--accent); }
   .limit p { margin: 0; font-size: .86rem; max-width: 46rem; }
 
+  .brief { border: 1px solid var(--hairline); border-left: 3px solid var(--accent);
+           background: var(--surface-2); padding: 1.15rem 1.3rem; max-width: 46rem; }
+  .brief-body { font-size: .93rem; line-height: 1.62; white-space: pre-wrap; }
+  .brief-body strong { color: var(--ink-1); }
+  #tractPanel { border: 1px solid var(--hairline); border-left: 3px solid var(--accent);
+                background: var(--surface-2); padding: 1rem 1.15rem; margin-top: 1rem;
+                font-size: .88rem; line-height: 1.6; white-space: pre-wrap; }
+  #tractPanel .hd { font-family: var(--f-display); font-weight: 600; font-size: .95rem;
+                    margin-bottom: .35rem; white-space: normal; }
+  .hint { font-size: .78rem; color: var(--ink-3); margin-top: .5rem; }
   .warn { color: var(--accent); font-size: .8rem; }
   footer { border-top: 1px solid var(--hairline); padding: 1.9rem 0 3rem;
            font-size: .77rem; color: var(--ink-3); }
@@ -183,11 +196,11 @@
 
 <nav><div class="wrap">
   <b>Respite</b>
-  <a href="#night" class="keep">The night</a>
+  <a href="#ask" class="keep">Ask the agent</a>
+  <a href="#night">Why night</a>
   <a href="#map-sec">Map</a>
   <a href="#gap">The gap</a>
   <a href="#missed">Who is missed</a>
-  <a href="#ask" class="keep">Ask</a>
   <span class="spacer"></span>
   <span class="navtag">Phoenix &middot; 15 Aug 2026</span>
 </div></nav>
@@ -212,6 +225,31 @@
   <div class="kpis" id="kpis"></div>
 </div></section>
 
+<section id="ask"><div class="wrap">
+  <p class="eyebrow">The agent, working unprompted</p>
+  <h2>Nobody asked it anything yet.</h2>
+  <p>This briefing was written by the agent on its own, by reading the measurements
+  below and the public health literature, before you arrived. It decided what mattered
+  and what you would need explained. The sources it consulted are listed underneath.</p>
+
+  <div class="brief" id="brief">
+    <div class="brief-body" id="briefBody">Writing the briefing.</div>
+    <div class="trail" id="briefTrail" hidden></div>
+  </div>
+
+  <h3 style="margin-top:2rem">Then ask it anything</h3>
+  <p>It answers from the same measurements. Where the data cannot support an answer it
+  says so instead of guessing, and it separates what we measured here from what is
+  established in the literature.</p>
+  <div class="askrow">
+    <input id="q" type="text" placeholder="Why does this matter?" aria-label="Ask a question">
+    <button id="ask-btn">Ask</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="answer" id="answer"></div>
+  <div class="trail" id="trail" hidden></div>
+</div></section>
+
 <section id="night"><div class="wrap">
   <p class="eyebrow">Why the night is what matters</p>
   <h2>Two tracts, the same night, one line between them.</h2>
@@ -219,6 +257,28 @@
   The difference appears after dark: some ground gives back the day's heat and some does
   not. Overnight minimum temperature predicts heat deaths better than the daytime peak,
   because a body that never cools never recovers.</p>
+
+  <div class="limits" style="margin-bottom:1.5rem">
+    <div class="limit">
+      <div class="k">What the number is</div>
+      <p>Hours of the night, midnight to dawn, that the outdoor air stayed above
+      28&nbsp;&deg;C (about 82&nbsp;&deg;F). Six hours means the whole window: it never once
+      dropped below that line.</p>
+    </div>
+    <div class="limit">
+      <div class="k">Why the night, not the day</div>
+      <p>The body sheds accumulated heat when the air is cooler than skin. A hot night
+      removes that recovery window, so the strain from the previous day carries into the
+      next. Overnight minimum temperature predicts heat deaths better than the daytime
+      peak, which is why multi-day heat events are more lethal than single hot days.</p>
+    </div>
+    <div class="limit">
+      <div class="k">Indoors is worse</div>
+      <p>A building that absorbed heat all day keeps releasing it inside for hours after
+      the outside air drops. The readings here are outdoor air at head height, so the
+      temperature people actually sleep in is generally higher.</p>
+    </div>
+  </div>
 
   <figure>
     <div class="legend" id="curveLegend"></div>
@@ -245,6 +305,7 @@
       midnight and dawn. The palest had about three hours of genuine relief.</p>
       <p style="font-size:.81rem">Hover any tract for its own numbers.</p>
       <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
+      <p class="hint">Click any tract and the agent will explain it.</p>
     </aside>
   </div>
 </div></section>
@@ -277,22 +338,6 @@
   <div class="kpis" id="sensCurve"></div>
 </div></section>
 
-<section id="ask"><div class="wrap">
-  <p class="eyebrow">Ask the analysis</p>
-  <h2>It answers from the measurements, and says when it cannot.</h2>
-  <p>Every answer is built by reading the same numbers shown on this page. Before making a
-  recommendation it checks a list of things this data does not support, so it will refuse
-  an unanswerable question rather than invent a figure. The sources it read are listed
-  under each answer.</p>
-
-  <div class="askrow">
-    <input id="q" type="text" placeholder="Ask about the study area" aria-label="Ask a question">
-    <button id="ask-btn">Ask</button>
-  </div>
-  <div class="chips" id="chips"></div>
-  <div class="answer" id="answer"></div>
-  <div class="trail" id="trail" hidden></div>
-</div></section>
 
 <section id="limits"><div class="wrap">
   <p class="eyebrow">What this does not show</p>
@@ -505,7 +550,8 @@ async function drawMap() {
   map.addLayer({ id: 'fill', type: 'fill', source: 't',
                  paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.92 } });
   map.addLayer({ id: 'line', type: 'line', source: 't',
-                 paint: { 'line-color': css('--surface-1'), 'line-width': 0.6 } });
+                 paint: { 'line-color': css('--hairline'), 'line-width': 0.5,
+                          'line-opacity': 0.55 } });
 
   const pop = new maplibregl.Popup({ closeButton: false, offset: 8 });
   map.on('mousemove', 'fill', e => {
@@ -521,6 +567,32 @@ async function drawMap() {
     ).addTo(map);
   });
   map.on('mouseleave', 'fill', () => { map.getCanvas().style.cursor = ''; pop.remove(); });
+
+  // Clicking a tract asks the agent to explain it, so a reader who would not know
+  // what to type still gets an explanation.
+  map.on('click', 'fill', async e => {
+    const p = e.features[0].properties;
+    let panel = document.getElementById('tractPanel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'tractPanel';
+      document.getElementById('map').insertAdjacentElement('afterend', panel);
+    }
+    panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>Asking the agent.';
+    try {
+      const r = await fetch('/api/explain/' + encodeURIComponent(p.geoid));
+      const b = await r.json();
+      if (!r.ok) { panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>'
+        + esc(b.detail || ('Request failed: ' + r.status)); return; }
+      const tools = (b.audit_trail || []).map(x => x.tool);
+      panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>' + esc(b.answer)
+        + '<div class="trail" style="margin-top:.7rem"><b>Read ' + tools.length
+        + ' sources:</b> ' + esc(tools.join(', ')) + '</div>';
+    } catch (err) {
+      panel.innerHTML = '<div class="hd">Tract ' + esc(p.name) + '</div>'
+        + 'Could not reach the agent.';
+    }
+  });
 }
 
 // The scale legend explains the ramp, so it must not wait on a WebGL map that
@@ -561,12 +633,34 @@ async function drawMissed() {
 }
 
 const SUGGESTIONS = [
+  'Why does it matter if it stays hot at night?',
+  'What should actually be done, where, and by whom?',
+  'Explain this to me like I know nothing about heat data',
   'Where is the city not looking?',
   'How solid is that number?',
-  'Which missed tracts have the most people over 65?',
-  'Would cool pavement help tract 1085.02?',
-  'Does this hold in Houston?'
+  'Would cool pavement help tract 1085.02?'
 ];
+
+async function loadBriefing() {
+  const body = document.getElementById('briefBody');
+  const trail = document.getElementById('briefTrail');
+  try {
+    const r = await fetch('/api/briefing');
+    const b = await r.json();
+    if (!r.ok) { body.textContent = b.detail || ('Briefing unavailable: ' + r.status);
+                 body.className = 'brief-body warn'; return; }
+    // The agent writes markdown-ish bold; render just that, escaping the rest.
+    body.innerHTML = esc(b.answer).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const tools = (b.audit_trail || []).map(x => x.tool);
+    trail.innerHTML = '<b>Wrote this after reading ' + tools.length + ' sources'
+      + (b.consulted_limits ? ', including the stated limits' : '') + ':</b> '
+      + esc(tools.join(', '));
+    trail.hidden = tools.length === 0;
+  } catch (e) {
+    body.textContent = 'Briefing unavailable. Every measurement on this page is unaffected.';
+    body.className = 'brief-body warn';
+  }
+}
 async function ask() {
   const btn = document.getElementById('ask-btn');
   const out = document.getElementById('answer');
@@ -603,6 +697,7 @@ document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () =
 
 // Each block is independent: one failure must not blank the page.
 loadHeadline().catch(e => console.error('headline', e));
+loadBriefing().catch(e => console.error('briefing', e));
 drawCurve().catch(e => console.error('curve', e));
 drawScatter().catch(e => {
   console.error('scatter', e);

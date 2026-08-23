@@ -265,10 +265,19 @@ def analysis_limits() -> dict:
     }
 
 
+from . import context as _ctx
+
+# Measurement tools and context tools are registered together so the agent can
+# reach both, but they carry different provenance and the prompt requires the
+# agent to keep that visible. Measurements come from this study; context comes
+# from the literature and is never tract-specific.
 REGISTRY = {
     "exposure_overview": exposure_overview,
     "divergence_summary": divergence_summary,
     "list_tracts": list_tracts,
     "tract_detail": tract_detail,
     "analysis_limits": analysis_limits,
+    "why_night_heat_matters": _ctx.why_night_heat_matters,
+    "what_cities_do": _ctx.what_cities_do,
+    "glossary": _ctx.glossary,
 }

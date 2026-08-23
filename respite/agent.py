@@ -50,16 +50,35 @@ index alone therefore misses genuinely exposed places and prioritises places
 where the night is already survivable. Your job is to surface that disagreement,
 not to smooth it over.
 
+You are writing for people who have never looked at temperature data. Assume no
+background. Explain what a number means before using it, and never leave a reader
+wondering why something matters.
+
+Two kinds of knowledge, and you must keep them apart:
+
+* MEASURED HERE: exposure_overview, divergence_summary, list_tracts, tract_detail.
+  These are our own measurements of Phoenix on one night.
+* GENERAL LITERATURE: why_night_heat_matters, what_cities_do, glossary. These are
+  established public health knowledge. They are not findings of this study and
+  they say nothing about what any specific tract would do if acted upon.
+
+When you draw on the second kind, say so, with wording like "this is established
+public health guidance rather than something we measured here".
+
 Rules you must follow:
 
 1. Call analysis_limits before you make any recommendation, and obey what it
    says. It lists claims this data cannot support.
 2. Never state or imply how many hours an intervention would save. No effect size
-   was measurable.
+   was measurable. You may describe what cities normally do, from what_cities_do,
+   as long as you do not attach a predicted result to it.
 3. Never combine exposure and vulnerability into a single score or ranking.
-4. Cite the tract and the number behind every claim.
+4. Cite the tract and the number behind every claim that comes from measurement.
 5. Where you are uncertain, say so plainly. A short accurate answer beats a long
    confident one.
+6. If asked why something matters, or what should be done, answer the question.
+   Reach for the literature tools rather than refusing. Refusing to explain the
+   mechanism is not caution, it is unhelpfulness.
 
 Write for a busy official: plain sentences, concrete numbers, no throat-clearing.
 
@@ -133,6 +152,41 @@ def tool_schemas() -> list[dict]:
                 "name": "analysis_limits",
                 "description": (
                     "What this analysis does not support. Call before recommending anything."
+                ),
+                "parameters": {"type": "object", "properties": {}},
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "why_night_heat_matters",
+                "description": (
+                    "Established public health background on why overnight heat harms "
+                    "people and who is most at risk. General literature, NOT measured "
+                    "here. Use for 'why does this matter' questions."
+                ),
+                "parameters": {"type": "object", "properties": {}},
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "what_cities_do",
+                "description": (
+                    "The standard heat-response playbook, immediate and long-term, with "
+                    "timescales. General practice, NOT a prediction of results here. Use "
+                    "for 'what should be done' questions."
+                ),
+                "parameters": {"type": "object", "properties": {}},
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "glossary",
+                "description": (
+                    "Plain-language definitions of the terms on this page, for a reader "
+                    "who has not seen this kind of data before."
                 ),
                 "parameters": {"type": "object", "properties": {}},
             },

@@ -137,7 +137,33 @@
 
   figure { margin: 0; }
   figcaption { font-size: .78rem; color: var(--ink-3); margin-top: .65rem; max-width: 46rem; }
+  /* Below a usable width the chart scrolls rather than shrinking its type into
+     illegibility. 560 keeps 10px labels above ~7px on a 375px screen. */
+  .chartbox { overflow-x: auto; overflow-y: hidden; }
   .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  @media (max-width: 40rem) { .chart { min-width: 560px; } }
+
+  .tablefold { margin-top: .7rem; }
+  .tablefold summary {
+    font-family: var(--f-data); font-size: .68rem; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-3); cursor: pointer;
+    padding: .2rem 0; list-style: none;
+  }
+  .tablefold summary::marker, .tablefold summary::-webkit-details-marker { display: none; }
+  .tablefold summary::before { content: '+ '; color: var(--ui); }
+  .tablefold[open] summary::before { content: '\2212 '; }
+  .tablefold summary:hover { color: var(--ui); }
+  .tablewrap { overflow-x: auto; margin-top: .5rem; }
+  .tablefold table { border-collapse: collapse; font-size: .76rem; width: 100%; }
+  .tablefold th, .tablefold td {
+    text-align: left; padding: .3rem .55rem; border-bottom: 1px solid var(--hairline);
+    white-space: nowrap;
+  }
+  .tablefold th { font-family: var(--f-data); font-size: .66rem; color: var(--ink-3);
+                  font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  .tablefold td.num, .tablefold th.num { text-align: right;
+                                         font-family: var(--f-data);
+                                         font-variant-numeric: tabular-nums; }
   .grid-line { stroke: var(--hairline); stroke-width: 1; }
   .axis-txt { font-family: var(--f-data); font-size: 10px; fill: var(--ink-3); }
   .lbl { font-family: var(--f-body); font-size: 11.5px; font-weight: 600; }
@@ -244,6 +270,8 @@
   }
   .themebtn:hover { color: var(--ui); border-color: var(--ui); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; }
   .warn { color: var(--accent); font-size: .8rem; }
   footer { border-top: 1px solid var(--hairline); padding: 1.9rem 0 3rem;
            font-size: .77rem; color: var(--ink-3); }
@@ -340,9 +368,14 @@
 
   <figure>
     <div class="legend" id="curveLegend"></div>
-    <svg class="chart" id="curveChart" viewBox="0 0 760 330" role="img"
-         aria-label="Hourly temperature through the night for two contrasting tracts"></svg>
+    <div class="chartbox">
+      <svg class="chart" id="curveChart" viewBox="0 0 760 330" role="img"
+           aria-label="Hourly temperature through the night for two contrasting tracts"></svg>
+    </div>
     <figcaption id="curveCap">Loading measured hourly temperatures.</figcaption>
+    <details class="tablefold"><summary>The same numbers as a table</summary>
+      <div class="tablewrap" id="curveTable"></div>
+    </details>
   </figure>
 </div></section>
 
@@ -350,17 +383,22 @@
   <p class="eyebrow">The whole study area</p>
   <h2>Hours without relief, by neighbourhood.</h2>
   <p>Each tract below is measured from roughly 48,000 temperature readings taken 100
-  metres apart, two metres above the ground, then averaged over the tract's area. Darker
-  means more of the night spent above 28&nbsp;&deg;C.</p>
+  metres apart, two metres above the ground, then averaged over the tract's area. The
+  scale runs from tracts that got a few hours of relief to tracts that never dropped
+  below 28&nbsp;&deg;C at all.</p>
 
   <div class="maprow">
     <div id="map"></div>
     <aside>
       <h3>Reading the map</h3>
       <div class="ramp" id="ramp"></div>
-      <div class="rampends"><span>3 h</span><span>the whole night</span></div>
-      <p style="font-size:.81rem">The darkest tracts never went below 28&nbsp;&deg;C between
-      midnight and dawn. The palest had about three hours of genuine relief.</p>
+      <div class="rampends"><span>3 h of relief</span><span>none at all</span></div>
+      <p style="font-size:.81rem">Tracts at the right-hand end of the scale never went
+      below 28&nbsp;&deg;C between midnight and dawn. Those at the left had about three
+      hours of genuine relief.</p>
+      <p style="font-size:.75rem;color:var(--ink-3)">The scale flips lightness between
+      themes on purpose: on a pale background the low end recedes, on a dark one it is the
+      high end that has to advance. Either way, left is more relief and right is none.</p>
       <p style="font-size:.81rem">Hover any tract for its own numbers.</p>
       <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
       <p class="hint">Click any tract and the agent will explain it.</p>
@@ -380,9 +418,14 @@
 
   <figure>
     <div class="legend" id="scatterLegend"></div>
-    <svg class="chart" id="scatterChart" viewBox="0 0 760 380" role="img"
-         aria-label="Overnight exposure against social vulnerability, showing no relationship"></svg>
+    <div class="chartbox">
+      <svg class="chart" id="scatterChart" viewBox="0 0 760 380" role="img"
+           aria-label="Overnight exposure against social vulnerability, showing no relationship"></svg>
+    </div>
     <figcaption id="scatterCap"></figcaption>
+    <details class="tablefold"><summary>The same numbers as a table</summary>
+      <div class="tablewrap" id="scatterTable"></div>
+    </details>
   </figure>
 </div></section>
 
@@ -537,6 +580,16 @@ async function drawCurve() {
     + '<span><i class="sw" style="background:' + css('--series-1') + '"></i>Tract ' + esc(d.cools.name)
     + ': below it for ' + d.cools_hours_below + ' of ' + n + ' hours</span>';
 
+  // Built from the same object the chart draws, so the two cannot disagree.
+  const rows = d.hours.map((h, i) =>
+    '<tr><td>' + h + '</td><td class="num">' + d.flat.series[i].toFixed(1)
+    + '</td><td class="num">' + d.cools.series[i].toFixed(1) + '</td></tr>').join('');
+  document.getElementById('curveTable').innerHTML =
+    '<table><caption class="sr">Hourly temperature in degrees Celsius</caption><thead><tr>'
+    + '<th>Hour</th><th class="num">Tract ' + esc(d.flat.name) + ' (\u00b0C)</th>'
+    + '<th class="num">Tract ' + esc(d.cools.name) + ' (\u00b0C)</th></tr></thead><tbody>'
+    + rows + '</tbody></table>';
+
   cap.textContent = 'Measured hourly, ' + d.date + ', midnight to dawn. Tract ' + d.flat.name
     + ' starts at ' + d.flat.max_c.toFixed(1) + '°C and bottoms out at ' + d.flat.min_c.toFixed(1)
     + '°C, never once crossing below 28°C. Tract ' + d.cools.name + ' reaches '
@@ -587,6 +640,22 @@ async function drawScatter() {
     '<span><i class="sw dot" style="background:' + css('--accent')
     + '"></i>Severely exposed, outside the targeted band</span>'
     + '<span><i class="sw dot" style="background:' + css('--deemph') + '"></i>Every other tract</span>';
+
+  // The chart's point is the emphasised group, so that is what the table lists.
+  // The full set is available at /api/tracts for anyone who wants all 132.
+  const bs = pts.filter(emph).slice().sort((a, b) => (a.svi || 0) - (b.svi || 0));
+  document.getElementById('scatterTable').innerHTML =
+    '<table><thead><tr><th>Tract</th><th class="num">Hours above 28 \u00b0C</th>'
+    + '<th class="num">Relief (h)</th><th class="num">Vulnerability rank</th>'
+    + '<th class="num">People</th></tr></thead><tbody>'
+    + bs.map(p => '<tr><td>' + esc(p.name) + '</td><td class="num">'
+        + Number(p.value).toFixed(2) + '</td><td class="num">'
+        + Number(p.relief_hours).toFixed(2) + '</td><td class="num">'
+        + Math.round((p.svi || 0) * 100) + '</td><td class="num">'
+        + (p.population ? fmt(p.population) : '') + '</td></tr>').join('')
+    + '</tbody></table><p style="font-size:.72rem;color:var(--ink-3);margin:.5rem 0 0">'
+    + 'The ' + bs.length + ' emphasised tracts. All ' + pts.length
+    + ' are available from the tracts endpoint.</p>';
 
   document.getElementById('scatterCap').textContent = pts.length
     + ' tracts. Height is hours above 28°C overnight, horizontal position is the CDC '

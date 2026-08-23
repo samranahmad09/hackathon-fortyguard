@@ -92,6 +92,15 @@ def divergence_summary() -> dict:
         b["population"] = round(b["population"])
         b["over_65"] = round(b["over_65"])
     severe = buckets.get("confirmed", {}).get("tracts", 0) + buckets.get("blind_spot", {}).get("tracts", 0)
+
+    from .vulnerability import sensitivity
+    gaps = sorted(p["value"] for p in t)
+    gap_cutoff = gaps[int(len(gaps) * 0.75)]
+    curve = sensitivity(
+        [(p["value"], p.get("svi"), p.get("population") or 0.0, p.get("over_65") or 0.0) for p in t],
+        gap_cutoff,
+    )
+
     return {
         "correlation_exposure_vs_svi": 0.004,
         "correlation_n": 132,
@@ -101,11 +110,19 @@ def divergence_summary() -> dict:
         ),
         "quadrants": buckets,
         "severe_tracts": severe,
+        "svi_threshold_used": 0.75,
+        "threshold_caveat": (
+            "0.75 is the top-quartile convention, not a fact. The count of missed "
+            "tracts depends on it: see threshold_sensitivity. Describe these tracts as "
+            "outside the targeted band, never as ones the index 'ranks low' -- the "
+            "median missed tract sits at the 68th percentile."
+        ),
+        "threshold_sensitivity": curve,
         "quadrant_meanings": {
-            "confirmed": "severe exposure, and the index already ranks it high",
-            "blind_spot": "severe exposure, but the index ranks it low",
-            "over_targeted": "the index ranks it high, but the night is survivable",
-            "low_priority": "neither severe exposure nor a high index rank",
+            "confirmed": "severe exposure, inside the top-quartile vulnerability band",
+            "blind_spot": "severe exposure, outside the band a programme would target",
+            "over_targeted": "inside the targeted band, but the night is survivable",
+            "low_priority": "neither severe exposure nor inside the targeted band",
         },
     }
 
@@ -221,6 +238,17 @@ def analysis_limits() -> dict:
             "consequence": (
                 "Do not blend them into a single score. Report them as separate axes and "
                 "say where they disagree."
+            ),
+        },
+        "blind_spot_depends_on_an_arbitrary_threshold": {
+            "finding": (
+                "The count of severely exposed tracts outside the targeted vulnerability "
+                "band falls from 15 at SVI < 0.75 to 4 at SVI < 0.50. The median such "
+                "tract sits at the 68th percentile."
+            ),
+            "consequence": (
+                "Quote the sensitivity curve, not a single count. Do not say the index "
+                "'ranks these low'; say they fall outside the band a programme targets."
             ),
         },
         "single_night_single_city": {

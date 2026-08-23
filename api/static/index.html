@@ -30,6 +30,20 @@
   .sw{width:1.1rem;height:.65rem;border-radius:2px;flex:none}
   .note{margin-top:.75rem;font-size:.7rem;color:var(--muted);line-height:1.5}
   .warn{margin-top:.5rem;font-size:.7rem;color:#bd4a1a}
+  .qrow{display:flex;gap:.35rem;margin:.2rem 0 .6rem}
+  #q{flex:1;min-width:0;font:inherit;font-size:.78rem;padding:.4rem .5rem;
+     border:1px solid var(--hairline);border-radius:.3rem}
+  #ask{font:inherit;font-size:.75rem;padding:.4rem .7rem;cursor:pointer;
+       background:#0e2129;color:#fff;border:none;border-radius:.3rem}
+  #ask[disabled]{opacity:.5;cursor:default}
+  .chips{display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.55rem}
+  .chip{font:inherit;font-size:.66rem;padding:.2rem .45rem;cursor:pointer;color:var(--muted);
+        background:#fff;border:1px solid var(--hairline);border-radius:.9rem;text-align:left}
+  .answer{font-size:.8rem;line-height:1.55;white-space:pre-wrap;max-height:15rem;overflow-y:auto}
+  .trail{margin-top:.55rem;padding-top:.5rem;border-top:1px solid var(--hairline);
+         font-family:ui-monospace,Consolas,monospace;font-size:.66rem;color:var(--muted);
+         max-height:8rem;overflow-y:auto}
+  .trail b{color:var(--ink);font-weight:600}
   .maplibregl-popup-content{font-size:.8rem;padding:.6rem .75rem;border-radius:.4rem}
   .maplibregl-popup-content b{display:block;margin-bottom:.2rem}
 </style>
@@ -42,11 +56,22 @@
   <div class="tabs">
     <button class="tab on" data-view="exposure">Exposure</button>
     <button class="tab" data-view="divergence">What the index misses</button>
+    <button class="tab" data-view="agent">Ask</button>
   </div>
   <div id="stats"><div class="stat"><span>loading…</span></div></div>
   <div class="legend" id="legend"></div>
   <p class="note" id="note"></p>
   <p class="warn" id="warn" hidden></p>
+
+  <div id="agentbox" hidden>
+    <div class="qrow">
+      <input id="q" type="text" placeholder="Ask about the study area">
+      <button id="ask">Ask</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="answer" class="answer"></div>
+    <div id="trail" class="trail" hidden></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -69,9 +94,9 @@ function colorExpr() {
 // view deliberately does not blend them into one score -- it shows where they
 // disagree, because the disagreement is the finding.
 const QUADS = [
-  ['blind_spot',    '#bd4a1a', 'Severe heat, index ranks it LOW'],
-  ['confirmed',     '#e8a33c', 'Severe heat, index ranks it high'],
-  ['over_targeted', '#7fa8bd', 'Index ranks high, night survivable'],
+  ['blind_spot',    '#bd4a1a', 'Severe heat, outside the targeted band'],
+  ['confirmed',     '#e8a33c', 'Severe heat, inside the targeted band'],
+  ['over_targeted', '#7fa8bd', 'Targeted, but the night is survivable'],
   ['low_priority',  '#dfe7ea', 'Neither'],
   ['unknown',       '#b8bfc4', 'Vulnerability suppressed'],
 ];
@@ -95,11 +120,16 @@ function renderLegend() {
 }
 
 function applyView() {
+  const isAgent = VIEW === 'agent';
   if (map.getLayer('fill')) {
+    // The agent view keeps the divergence colouring, since that is what it talks about.
     map.setPaintProperty('fill', 'fill-color',
       VIEW === 'exposure' ? colorExpr() : quadExpr());
     map.setPaintProperty('fill', 'fill-opacity', VIEW === 'exposure' ? 0.8 : 0.85);
   }
+  document.getElementById('agentbox').hidden = !isAgent;
+  document.getElementById('legend').hidden = isAgent;
+  document.getElementById('note').hidden = isAgent;
   renderLegend();
   renderStats();
 }
@@ -125,6 +155,11 @@ function renderStats() {
       '<div class="stat"><span>Spread</span><b>' + SUMMARY.spread_hours + ' h</b></div>';
     note.textContent = 'Hours above ' + SUMMARY.threshold_c + ' \u00b0C during ' + SUMMARY.night_window +
       ', Phoenix, 15 Aug 2026. Area-weighted from 47,944 tiles at 100 m onto ' + SUMMARY.tracts + ' census tracts.';
+  } else if (VIEW === 'agent') {
+    el.innerHTML =
+      '<div class="stat"><span>Agent reads</span><b>5 measurement tools</b></div>' +
+      '<div class="stat"><span>Before recommending</span><b>checks stated limits</b></div>';
+    return;
   } else {
     if (!DIVERGENCE) { el.innerHTML = '<div class="stat"><span>unavailable</span></div>'; return; }
     const bs = DIVERGENCE.quadrants.blind_spot || { tracts: 0, population: 0, over_65: 0 };
@@ -135,7 +170,69 @@ function renderStats() {
       '<div class="stat"><span>Aged 65+ in them</span><b>' + bs.over_65.toLocaleString() + '</b></div>';
     note.textContent = 'Measured overnight exposure and CDC social vulnerability are uncorrelated ' +
       'in this study area, so neither substitutes for the other. Red tracts are severely exposed ' +
-      'yet sit below the 75th SVI percentile a programme would target by.';
+      'but fall outside the top-quartile band a programme would target. That count depends on ' +
+      'where the line is drawn: 15 tracts at SVI 0.75, 4 at SVI 0.50.';
+  }
+}
+
+const SUGGESTIONS = [
+  'Where is the city not looking?',
+  'How solid is that number?',
+  'Which missed tracts have the most people over 65?',
+  'Would cool pavement help tract 1085.02?',
+];
+
+function renderChips() {
+  const box = document.getElementById('chips');
+  box.innerHTML = '';
+  SUGGESTIONS.forEach(function (t) {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = t;
+    b.addEventListener('click', function () {
+      document.getElementById('q').value = t;
+      ask();
+    });
+    box.appendChild(b);
+  });
+}
+
+async function ask() {
+  const input = document.getElementById('q');
+  const btn = document.getElementById('ask');
+  const out = document.getElementById('answer');
+  const trail = document.getElementById('trail');
+  const question = input.value.trim();
+  if (!question) return;
+
+  btn.disabled = true;
+  out.textContent = 'Thinking. The agent reads the measurements before answering.';
+  trail.hidden = true;
+
+  try {
+    const res = await fetch('/api/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: question })
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      out.textContent = body.detail || ('Request failed with status ' + res.status);
+      return;
+    }
+    out.textContent = body.answer || '(no answer)';
+    const calls = (body.audit_trail || []).map(function (s) {
+      return (s.ok ? '' : 'FAILED ') + s.tool +
+             (Object.keys(s.args || {}).length ? ' ' + JSON.stringify(s.args) : '');
+    });
+    trail.innerHTML = '<b>Read ' + calls.length + ' source' + (calls.length === 1 ? '' : 's') +
+      (body.consulted_limits ? ', including the stated limits' : '') + ':</b><br>' +
+      calls.join('<br>');
+    trail.hidden = calls.length === 0;
+  } catch (e) {
+    out.textContent = 'Could not reach the agent: ' + (e && e.message ? e.message : e);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -242,6 +339,12 @@ function boot() {
   if (!bootPromise) bootPromise = doBoot();
   return bootPromise;
 }
+
+document.getElementById('ask').addEventListener('click', ask);
+document.getElementById('q').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') ask();
+});
+renderChips();
 
 document.querySelectorAll('.tab').forEach(function (btn) {
   btn.addEventListener('click', function () {

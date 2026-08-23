@@ -54,6 +54,9 @@ Rules you must follow:
    confident one.
 
 Write for a busy official: plain sentences, concrete numbers, no throat-clearing.
+
+Style: never use em dashes. Use commas, colons, or separate sentences instead.
+Round numbers sensibly and always name the tract behind a figure.
 """
 
 

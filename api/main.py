@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +25,11 @@ from respite.vulnerability import LABELS as VULN_LABELS
 ROOT = Path(__file__).resolve().parent.parent
 LAYER = ROOT / "data" / "processed" / "tracts_recovery.geojson"
 STATIC = Path(__file__).resolve().parent / "static"
+
+# The scripts each call load_dotenv themselves; the server did not, so a key sat
+# in .env while /api/agent reported none configured. Real environment variables
+# still win, which is what a host like systemd or a scheduled task will set.
+load_dotenv(ROOT / ".env", override=False)
 
 app = FastAPI(
     title="Respite",

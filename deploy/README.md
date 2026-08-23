@@ -55,8 +55,10 @@ notepad .env
 environment and never returns their values. `/health` reports only whether each
 one is *present*.
 
-The map does not need any key at all. Only the agent (still to be built) needs
-`OPENAI_API_KEY`, and only offline layer rebuilds need `FORTYGUARD_API_KEY`.
+The map does not need any key at all. Only `/api/agent` needs `OPENAI_API_KEY`,
+and only offline layer rebuilds need `FORTYGUARD_API_KEY`. The app loads `.env`
+at import, and real environment variables take precedence, so a host that sets
+them directly does not need the file.
 
 ## 5. Run it as a service
 

@@ -682,6 +682,38 @@ const map = new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
+// MapLibre measures its container once, at construction. This script runs before
+// the layout has settled, so on a cold load it measured 62px of an 860px column
+// and painted the whole city into a sliver down the left edge. Nothing in the
+// console, no error banner, just a map that looked broken.
+//
+// An observer rather than a load-time resize() call: the same mis-sizing happens
+// whenever the column changes width, which the sidebar, the table folds and a
+// phone rotation all do.
+//
+// Called synchronously, not coalesced through requestAnimationFrame. rAF looked
+// like the careful choice and was worse: it does not fire in a hidden tab, so a
+// pending-flag guard around it latched on and blocked every later resize. #map is
+// sized by CSS, width from its column and height from a clamp, so resize() cannot
+// change the box being observed and there is no loop to guard against.
+//
+// Three triggers, because they cover different things and the cheap one is not
+// the reliable one. ResizeObserver catches container changes that leave the window
+// alone, a table fold opening or a column reflowing, but its callbacks are
+// delivered in the rendering step and a browser that is not painting the page
+// skips them. The window listener is not tied to painting, so it survives that.
+// The load handler covers the case that actually bit: correct size at first paint,
+// whatever the layout was doing when the constructor measured.
+function fitMap() {
+  // Skip a hidden container: resizing to zero throws away the viewport and the
+  // map comes back centred on nothing.
+  const el = map.getContainer();
+  if (el.clientWidth > 0 && el.clientHeight > 0) map.resize();
+}
+map.on('load', fitMap);
+addEventListener('resize', fitMap);
+new ResizeObserver(fitMap).observe(map.getContainer());
+
 async function drawMap() {
   const gj = await fetch('/api/tracts').then(r => r.json());
   map.addSource('t', { type: 'geojson', data: gj });

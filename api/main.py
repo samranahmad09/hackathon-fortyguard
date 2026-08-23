@@ -332,7 +332,18 @@ def agent_tools() -> dict:
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(STATIC / "index.html")
+    # No-store on the page itself. The whole app is one HTML file, so a cached
+    # copy means a reviewer reloads, sees the old build, and reports bugs that
+    # were fixed an hour ago. That cost real time when the page was being shared
+    # over a tunnel: the server had the fix, the browser did not, and nothing in
+    # the console said so.
+    #
+    # Cheap to give up: the file is around 45 KB and there is nothing else to
+    # revalidate against.
+    return FileResponse(
+        STATIC / "index.html",
+        headers={"Cache-Control": "no-store, must-revalidate"},
+    )
 
 
 if STATIC.exists():

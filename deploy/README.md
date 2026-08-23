@@ -9,6 +9,34 @@ certificate. If any step looks like it would touch a live service, stop.
 
 ---
 
+## Sharing it before any of this
+
+To let a teammate look at the page without deploying anything:
+
+```powershell
+.\deploy\share.ps1
+```
+
+That starts the server on loopback, opens a Cloudflare quick tunnel to it, and
+prints a `*.trycloudflare.com` address it also copies to the clipboard. No
+account, no DNS, no certificate.
+
+Two things to know before sending the link. The address is random and a new run
+gets a different one, so it cannot be bookmarked. And it stops working when the
+window closes, which is the right property for a URL that ends up pasted into a
+group chat.
+
+Anyone with the address can ask the agent questions, and every question spends
+money on the OpenAI key. `api/limits.py` caps that: 25 questions per caller per
+hour, 300 for the process, checked before the model is reached so a blocked
+request costs nothing. `/health` reports the current count. Nothing on the page
+can spend FortyGuard credits, because the request path reads the committed data
+layer and never calls the vendor.
+
+Use the rest of this document for anything that needs to stay up.
+
+---
+
 ## 1. DNS
 
 Add one record at whoever hosts `samtechpk.com` DNS:

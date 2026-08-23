@@ -16,10 +16,11 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from api import limits
 from respite import tools as rtools
 from respite.vulnerability import LABELS as VULN_LABELS
 
@@ -68,6 +69,7 @@ def health() -> dict:
         # Presence only. Never the value.
         "fortyguard_key_configured": bool(os.getenv("FORTYGUARD_API_KEY")),
         "llm_key_configured": bool(os.getenv("OPENAI_API_KEY")),
+        **limits.state(),
     }
 
 
@@ -206,8 +208,17 @@ def curves(pair: bool = True) -> dict:
     }
 
 
-def _agent_or_503():
-    """Shared guard so every agent-backed endpoint fails the same way."""
+def _agent_or_503(request: Request | None = None):
+    """Shared guard so every agent-backed endpoint fails the same way.
+
+    Also enforces the spend ceiling, because these endpoints cost money per call
+    and the app is meant to be shareable over a tunnel.
+    """
+    if request is not None:
+        try:
+            limits.check(request)
+        except limits.RateLimited as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
             status_code=503,
@@ -229,17 +240,19 @@ BRIEFING_PROMPT = (
 
 
 @app.get("/api/briefing")
-def briefing(refresh: bool = False) -> dict:
+def briefing(request: Request, refresh: bool = False) -> dict:
     """A standing briefing the agent writes without being asked.
 
     Generated on first request and cached, so repeated visits cost nothing and
     the wording stays stable between them. ``refresh=1`` forces a rewrite.
     """
     global _briefing_cache
+    # The cached briefing is free to serve, so it is not counted against the
+    # allowance. Only a real generation spends anything.
     if _briefing_cache is not None and not refresh:
         return {**_briefing_cache, "cached": True}
 
-    run, model = _agent_or_503()
+    run, model = _agent_or_503(request)
     try:
         brief = run(BRIEFING_PROMPT, model)
     except Exception as exc:  # noqa: BLE001
@@ -254,7 +267,7 @@ def briefing(refresh: bool = False) -> dict:
 
 
 @app.get("/api/explain/{geoid}")
-def explain(geoid: str) -> dict:
+def explain(geoid: str, request: Request) -> dict:
     """Explain one tract in plain language, triggered by a click rather than a question."""
     if geoid in _tract_cache:
         return {**_tract_cache[geoid], "cached": True}
@@ -263,7 +276,7 @@ def explain(geoid: str) -> dict:
     if check.get("error"):
         raise HTTPException(status_code=404, detail=check["error"])
 
-    run, model = _agent_or_503()
+    run, model = _agent_or_503(request)
     prompt = (
         f"Explain tract {geoid} to someone with no background in this data. Say how its "
         "night compared with the rest of the city, who lives there, whether a "
@@ -281,7 +294,7 @@ def explain(geoid: str) -> dict:
 
 
 @app.post("/api/agent")
-def agent(payload: dict) -> dict:
+def agent(payload: dict, request: Request) -> dict:
     """Ask the agent a question. Returns its answer plus the full audit trail.
 
     POST {"question": "..."}
@@ -294,7 +307,7 @@ def agent(payload: dict) -> dict:
     if not question:
         raise HTTPException(status_code=422, detail="Provide a 'question' field.")
 
-    run, model = _agent_or_503()
+    run, model = _agent_or_503(request)
     try:
         brief = run(question, model)
     except Exception as exc:  # noqa: BLE001 - surface provider failures as 502

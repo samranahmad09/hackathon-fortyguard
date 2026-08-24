@@ -570,7 +570,8 @@
       <div class="ramp" id="ramp"></div>
       <div class="rampends"><span>3 h of relief</span><span>none at all</span></div>
       <p style="font-size:.79rem">Left of the scale is three hours of genuine relief.
-      Right is none at all.</p>
+      Right is none at all. Streets and place names are underneath, so you can see
+      which neighbourhood each tract is.</p>
       <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
       <details class="disc"><summary>How this was measured</summary>
         <div class="inner"><p>Roughly 48,000 readings taken 100 metres apart, two metres
@@ -602,6 +603,17 @@
   </figure>
 
   <div class="discs">
+    <details class="disc"><summary>Why 18 tracts, and not 32</summary>
+      <div class="inner"><p>A tract counts as having no relief only if its hours above
+      28&nbsp;&deg;C exactly equal the six-hour window. That is the strictest possible
+      reading, and it is sensitive: several tracts dipped below the threshold for under a
+      second, which is interpolation noise rather than a recovery window.</p>
+      <p>Counted by how much relief still counts as none: <span class="mono">18</span>
+      tracts at exactly zero, <span class="mono">32</span> at under a minute,
+      <span class="mono">34</span> at under fifteen minutes. The page quotes 18 because it
+      is the claim that cannot be argued down, not because it is the robust one. The agent
+      has the whole curve and will give it to you.</p></div>
+    </details>
     <details class="disc"><summary>Why that flat cloud is the whole point</summary>
       <div class="inner"><p>Heat programmes are usually aimed using a social vulnerability
       index, on the assumption that the most vulnerable places are also the hottest. In
@@ -793,6 +805,15 @@ async function drawScatter() {
   g += '<text class="axis-txt" x="' + ((m.l + W - m.r) / 2) + '" y="' + (H - 8)
      + '" text-anchor="middle">vulnerability rank (percentile)</text>';
 
+  // Drawn before the points so the points sit on top of it.
+  const atCeiling = pts.filter(p => p.value >= 6 - 1e-6).length;
+  const nearCeiling = pts.filter(p => p.value < 6 - 1e-6 && p.value >= 6 - 180 / 3600).length;
+  g += '<line x1="' + m.l + '" y1="' + Y(6) + '" x2="' + (W - m.r) + '" y2="' + Y(6)
+     + '" stroke="' + css('--ink-3') + '" stroke-width="1.25" stroke-dasharray="5 4"/>'
+     + '<text class="axis-txt" x="' + (W - m.r) + '" y="' + (Y(6) - 7)
+     + '" text-anchor="end" fill="' + css('--ink-2') + '">ceiling: above 28 \u00b0C for the '
+     + 'whole window, cannot be ranked</text>';
+
   const emph = p => p.quadrant === 'blind_spot';
   pts.filter(p => !emph(p)).forEach(p => {
     g += '<circle cx="' + X(p.svi) + '" cy="' + Y(p.value) + '" r="4" fill="' + css('--deemph')
@@ -804,8 +825,34 @@ async function drawScatter() {
   });
   const sharp = pts.filter(emph).sort((a, b) => a.svi - b.svi)[0];
   if (sharp) {
-    g += '<text class="lbl" x="' + (X(sharp.svi) + 11) + '" y="' + (Y(sharp.value) + 4)
-       + '" fill="' + css('--ink-1') + '">Tract ' + esc(sharp.name) + '</text>';
+    const text = 'Tract ' + sharp.name;
+    // 11.5px semibold averages a little over 6px a character. Close enough to
+    // test for a collision; the halo covers the rest.
+    const wide = text.length * 6.3;
+    const cx = X(sharp.svi), cy = Y(sharp.value);
+    // Does anything sit inside the label box if it goes to the right?
+    const blocked = (from, to) => pts.some(o =>
+      o !== sharp && Math.abs(Y(o.value) - cy) < 8 && X(o.svi) > from && X(o.svi) < to);
+    let x = cx + 11, anchor = 'start', y = cy + 4;
+    if (blocked(cx + 6, cx + 11 + wide)) {
+      if (!blocked(cx - 11 - wide, cx - 6) && cx - 11 - wide > m.l) {
+        x = cx - 11; anchor = 'end';                    // put it on the clear side
+      } else {
+        x = cx; anchor = 'middle'; y = cy + 21;          // last resort, below the row
+      }
+    }
+    // Dropped below a crowded row, the label needs a leader or it is not obvious
+    // which of the dots above it belongs to.
+    if (anchor === 'middle') {
+      g += '<line x1="' + cx + '" y1="' + (cy + 6) + '" x2="' + cx + '" y2="' + (y - 11)
+         + '" stroke="' + css('--ink-3') + '" stroke-width="1"/>';
+    }
+    // A halo, because the ceiling row is crowded and the label has to stay
+    // readable whichever side it lands on.
+    g += '<text class="lbl" x="' + x + '" y="' + y + '" text-anchor="' + anchor
+       + '" style="paint-order:stroke" stroke="' + css('--surface-1')
+       + '" stroke-width="3.5" stroke-linejoin="round" fill="' + css('--ink-1') + '">'
+       + esc(text) + '</text>';
   }
   svg.innerHTML = g;
 
@@ -835,7 +882,12 @@ async function drawScatter() {
     + 'vulnerability percentile. Orange dots are severely exposed yet sit outside the '
     + 'top-quartile band a programme would target.'
     + (sharp ? ' Tract ' + sharp.name + ' is the sharpest case: it never cooled below 28°C, '
-        + 'and ranks in the bottom ' + Math.round(sharp.svi * 100) + '% for vulnerability.' : '');
+        + 'and ranks in the bottom ' + Math.round(sharp.svi * 100) + '% for vulnerability.' : '')
+    // Without this the top row reads as a contradiction of the headline, because
+    // it holds more dots than the number quoted everywhere else on the page.
+    + ' The dashed row holds more points than the ' + atCeiling + ' tracts quoted as having '
+    + 'no relief: ' + nearCeiling + ' more came within three minutes of the ceiling, which is '
+    + 'the same pixel at this scale.';
 }
 
 const BINS = [3.6, 4.3, 5.0, 5.7];
@@ -851,7 +903,8 @@ const map = new maplibregl.Map({
   style: { version: 8, sources: {},
            layers: [{ id: 'bg', type: 'background',
                       paint: { 'background-color': css('--surface-2') } }] },
-  center: [-112.077, 33.494], zoom: 9.6, attributionControl: false
+  center: [-112.077, 33.494], zoom: 9.6,
+  attributionControl: { compact: true }
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
@@ -887,14 +940,70 @@ map.on('load', fitMap);
 addEventListener('resize', fitMap);
 new ResizeObserver(fitMap).observe(map.getContainer());
 
+const CARTO = (style) => ['a', 'b', 'c'].map(
+  h => 'https://' + h + '.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}@2x.png');
+
+// Which basemap to show is a question about the rendered theme, not about the
+// stored preference, because "auto" resolves to either. color-scheme is set by
+// every theme block, so it answers for all three states.
+const isDark = () =>
+  getComputedStyle(document.documentElement).colorScheme.indexOf('dark') === 0;
+
+function syncBasemap() {
+  const dark = isDark();
+  const vis = (id, on) => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  };
+  vis('base-dark', dark);
+  vis('base-light', !dark);
+  vis('labels-dark', dark);
+  vis('labels-light', !dark);
+}
+
 async function drawMap() {
   const gj = await fetch('/api/tracts').then(r => r.json());
+
+  for (const [id, style] of [['base-light', 'light_nolabels'], ['base-dark', 'dark_nolabels']]) {
+    map.addSource(id, { type: 'raster', tiles: CARTO(style), tileSize: 256,
+                        attribution: '&copy; OpenStreetMap contributors &copy; CARTO' });
+    map.addLayer({ id: id, type: 'raster', source: id,
+                   // Muted, so the city reads as context and the data reads as data.
+                   paint: { 'raster-opacity': 0.85, 'raster-saturation': -0.35 } });
+  }
+
   map.addSource('t', { type: 'geojson', data: gj });
+  // Lower than it was, because the basemap underneath has to show through. The
+  // outline carries the tract boundaries that the opacity no longer makes obvious.
   map.addLayer({ id: 'fill', type: 'fill', source: 't',
-                 paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.92 } });
+                 paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.72 } });
   map.addLayer({ id: 'line', type: 'line', source: 't',
-                 paint: { 'line-color': css('--hairline'), 'line-width': 0.5,
-                          'line-opacity': 0.55 } });
+                 paint: { 'line-color': css('--hairline'), 'line-width': 0.6,
+                          'line-opacity': 0.7 } });
+
+  // Above the choropleth on purpose: names the reader can use are the whole
+  // reason for adding a basemap.
+  for (const [id, style] of [['labels-light', 'light_only_labels'],
+                             ['labels-dark', 'dark_only_labels']]) {
+    map.addSource(id, { type: 'raster', tiles: CARTO(style), tileSize: 256 });
+    map.addLayer({ id: id, type: 'raster', source: id, paint: { 'raster-opacity': 0.95 } });
+  }
+  syncBasemap();
+
+  // Frame the study area rather than trusting a hardcoded centre and zoom, which
+  // left the tracts as a small blob in the middle of an empty rectangle.
+  let x0 = 180, y0 = 90, x1 = -180, y1 = -90;
+  for (const f of gj.features) {
+    const walk = (c) => {
+      if (typeof c[0] === 'number') {
+        if (c[0] < x0) x0 = c[0];
+        if (c[0] > x1) x1 = c[0];
+        if (c[1] < y0) y0 = c[1];
+        if (c[1] > y1) y1 = c[1];
+      } else c.forEach(walk);
+    };
+    if (f.geometry) walk(f.geometry.coordinates);
+  }
+  if (x1 > x0) map.fitBounds([[x0, y0], [x1, y1]], { padding: 28, duration: 0 });
 
   const pop = new maplibregl.Popup({ closeButton: false, offset: 8 });
   map.on('mousemove', 'fill', e => {
@@ -1246,6 +1355,7 @@ revealOnScroll();
         try {
           map.setPaintProperty('fill', 'fill-color', heatExpr());
           map.setPaintProperty('line', 'line-color', css('--hairline'));
+          syncBasemap();
         } catch (e) { /* map not ready */ }
       }
     });

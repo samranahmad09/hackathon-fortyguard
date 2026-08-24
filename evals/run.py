@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
 from evals.cases import CASES, REFUSAL, Case
-from respite.agent import openai_model, run
+from respite.agent import MODEL as PROD_MODEL, openai_model, run
 
 JUDGE_MODEL = "gpt-5-mini"
 
@@ -176,7 +176,10 @@ def main() -> int:
                 print(f"  {c.id}")
             return 1
 
-    models = args.compare or [args.model or "gpt-4.1"]
+    # Default to whatever the app actually runs. A suite whose default differs
+    # from production tests a model nobody ships, and a green run says nothing
+    # about the deployed behaviour.
+    models = args.compare or [args.model or PROD_MODEL]
     all_results: dict[str, list[Result]] = {}
     for m in models:
         all_results[m] = run_suite(m, cases, args.verbose, args.repeat)

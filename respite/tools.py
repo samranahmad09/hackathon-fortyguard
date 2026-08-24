@@ -53,6 +53,37 @@ def _f(v: Any) -> float | None:
 
 # ----------------------------------------------------------------- tools
 
+# Seconds of relief still counted as "no relief". Zero is the strict reading and
+# is what the headline uses. The rest are here because the strict reading turns on
+# a tolerance nobody chose on physical grounds.
+RELIEF_TOLERANCES_S = (0, 60, 300, 900, 1800)
+
+
+def relief_sensitivity() -> list[dict]:
+    """How the no-relief count moves with the tolerance applied to it.
+
+    ``TractStat.no_relief`` tests ``value >= WINDOW_HOURS - 1e-6``. That 1e-6 is a
+    floating-point equality guard, 3.6 milliseconds, and it ended up acting as a
+    physical threshold. Tracts credited with relief include several whose
+    area-weighted mean dipped below the line for under a second, which is
+    interpolation noise rather than a recovery window.
+
+    It matters because the count nearly doubles: 18 tracts at exactly zero relief,
+    32 once a single minute counts as none. So the honest object is this curve, the
+    same way the vulnerability cut is reported as a curve rather than one number.
+    """
+    t = _tracts()
+    out = []
+    for secs in RELIEF_TOLERANCES_S:
+        sel = [p for p in t if (WINDOW_HOURS - p["value"]) * 3600.0 <= secs + 1e-9]
+        out.append({
+            "relief_under_seconds": secs,
+            "tracts": len(sel),
+            "population": round(sum(p.get("population") or 0 for p in sel)),
+        })
+    return out
+
+
 def exposure_overview() -> dict:
     """Headline numbers for the study area."""
     t = _tracts()
@@ -70,10 +101,19 @@ def exposure_overview() -> dict:
         "spread_hours": round(vals[-1] - vals[0], 2),
         "tracts_with_no_relief": len(no_relief),
         "population_with_no_relief": round(sum(p.get("population") or 0 for p in no_relief)),
+        # Reported alongside the count, never separately, because the count is the
+        # strictest point on this curve rather than a robust figure.
+        "no_relief_tolerance_sensitivity": relief_sensitivity(),
         "metric_meaning": (
             "Hours spent above the threshold during the night window, area-weighted "
             "from 100 m tiles. At the window maximum the tract never dropped below "
             "the threshold at any point in the night."
+        ),
+        "counting_caveat": (
+            "The no-relief count uses exact equality with the window. Several further "
+            "tracts dipped below the threshold for under a second, which is not a "
+            "recovery window, so the count rises from 18 to 32 if a minute of relief "
+            "still counts as none. Quote the sensitivity, not the bare 18."
         ),
     }
 
@@ -249,6 +289,18 @@ def analysis_limits() -> dict:
             "consequence": (
                 "Quote the sensitivity curve, not a single count. Do not say the index "
                 "'ranks these low'; say they fall outside the band a programme targets."
+            ),
+        },
+        "no_relief_count_depends_on_a_tolerance": {
+            "finding": (
+                "The no-relief count tests exact equality with the 6 h window. Tracts "
+                "just under it dipped below the threshold for as little as a tenth of a "
+                "second, which is interpolation noise, not recovery. The count is 18 at "
+                "exactly zero relief, 32 at under a minute, 34 at under fifteen minutes."
+            ),
+            "consequence": (
+                "Do not present 18 as a robust count. Say it is the strictest reading and "
+                "give the curve, the same way the vulnerability threshold is handled."
             ),
         },
         "single_night_single_city": {

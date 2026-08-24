@@ -43,6 +43,14 @@
     --heat-4: #d96a28;
     --heat-5: #a83a16;
 
+    /* Translucent surfaces for the nav and the docked bar. A blur needs
+       something to blur, so these carry alpha rather than a flat colour. */
+    --on-ui:      #ffffff;
+    --glass:      rgba(252,252,251,.74);
+    --glass-line: rgba(20,20,15,.09);
+    --glow:       rgba(13,125,138,.13);
+    --mesh:       rgba(20,20,15,.028);
+
     --f-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
     --f-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --f-data: "JetBrains Mono", ui-monospace, Consolas, monospace;
@@ -64,6 +72,10 @@
          yellow steps used in light mode read as olive mud here. */
       --heat-1: #4a2a1c; --heat-2: #74381f; --heat-3: #9e4a22;
       --heat-4: #c9612c; --heat-5: #f0813f;
+      --on-ui: #141416;
+      --on-ui: #141416;
+    --glass: rgba(20,20,22,.72); --glass-line: rgba(255,255,255,.10);
+      --glow: rgba(65,195,207,.16); --mesh: rgba(255,255,255,.035);
     }
   }
   :root[data-theme="dark"] {
@@ -77,6 +89,8 @@
     --shadow: 0 .5rem 1.6rem rgba(0,0,0,.5);
     --heat-1: #4a2a1c; --heat-2: #74381f; --heat-3: #9e4a22;
     --heat-4: #c9612c; --heat-5: #f0813f;
+    --glass: rgba(20,20,22,.72); --glass-line: rgba(255,255,255,.10);
+    --glow: rgba(65,195,207,.16); --mesh: rgba(255,255,255,.035);
   }
 
   *,*::before,*::after { box-sizing: border-box; }
@@ -119,11 +133,6 @@
   p.lead { font-size: clamp(1.02rem, 1.8vw, 1.18rem); color: var(--ink-1); max-width: 34rem; }
   strong { color: var(--ink-1); font-weight: 600; }
   .mono { font-family: var(--f-data); }
-
-  .hero-fig { font-family: var(--f-display); font-weight: 800; letter-spacing: -.04em;
-              font-size: clamp(3.6rem, 13vw, 8rem); line-height: .85; color: var(--accent); }
-  .hero-grid { display: grid; gap: clamp(1.4rem, 4vw, 3rem); grid-template-columns: 1fr; }
-  @media (min-width: 56rem) { .hero-grid { grid-template-columns: 1fr 14rem; align-items: end; } }
 
   .kpis { display: grid; gap: 1px; background: var(--hairline);
           border: 1px solid var(--hairline); margin-top: 1.6rem;
@@ -211,30 +220,11 @@
                 padding: .12rem .4rem; background: var(--surface-2); color: var(--ink-2);
                 margin-top: .5rem; }
 
-  .askrow { display: flex; gap: .4rem; max-width: 40rem; }
-  #q { flex: 1; min-width: 0; font: inherit; font-size: .88rem; padding: .58rem .7rem;
-       border: 1px solid var(--hairline); border-radius: .25rem;
-       background: var(--surface-1); color: var(--ink-1); }
-  #ask-btn { font: inherit; font-size: .84rem; font-weight: 600; padding: .58rem 1.05rem;
-             cursor: pointer; background: var(--ui); color: var(--surface-1);
-             border: none; border-radius: .25rem;
-             transition: filter .18s var(--ease); }
-  #ask-btn:hover:not([disabled]) { filter: brightness(1.1); }
-  #ask-btn[disabled] { opacity: .45; cursor: default; }
-  .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0 1.05rem; }
-  .chip { font: inherit; font-size: .75rem; padding: .28rem .6rem; cursor: pointer;
-          background: var(--surface-2); color: var(--ink-2);
-          border: 1px solid var(--hairline); border-radius: 1rem; }
-  .chip { transition: border-color .18s var(--ease), color .18s var(--ease),
-                      transform .18s var(--ease); }
-  .chip:hover { color: var(--ink-1); border-color: var(--ui); transform: translateY(-1px); }
   .pulse { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%;
            background: var(--ui); margin-right: .45rem; vertical-align: baseline;
            animation: pulse 1.1s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: .25; transform: scale(.8); }
                      50% { opacity: 1; transform: scale(1); } }
-  .answer { font-size: .92rem; line-height: 1.6; white-space: pre-wrap;
-            max-width: 44rem; min-height: 1.5rem; }
   .trail { margin-top: .9rem; padding-top: .7rem; border-top: 1px solid var(--hairline);
            font-family: var(--f-data); font-size: .7rem; color: var(--ink-3); max-width: 44rem; }
   .trail b { color: var(--ink-2); }
@@ -247,17 +237,13 @@
   .limit .k { font-family: var(--f-data); font-size: .77rem; color: var(--ui); }
   .limit p { margin: 0; font-size: .86rem; max-width: 46rem; }
 
-  .brief { border: 1px solid var(--hairline); border-left: 3px solid var(--ui);
-           background: var(--surface-2); padding: 1.15rem 1.3rem; max-width: 46rem; }
-  .brief-body { font-size: .93rem; line-height: 1.62; white-space: pre-wrap; }
-  .brief-body strong { color: var(--ink-1); }
   #tractPanel { border: 1px solid var(--hairline); border-left: 3px solid var(--ui);
                 background: var(--surface-2); padding: 1rem 1.15rem; margin-top: 1rem;
                 font-size: .88rem; line-height: 1.6; white-space: pre-wrap; }
   #tractPanel .hd { font-family: var(--f-display); font-weight: 600; font-size: .95rem;
                     margin-bottom: .35rem; white-space: normal; }
   .hint { font-size: .78rem; color: var(--ink-3); margin-top: .5rem; }
-  .answer code, .brief-body code, #tractPanel code {
+  .msg .txt code, #tractPanel code {
     font-family: var(--f-data); font-size: .86em;
     background: var(--surface-2); padding: .05rem .25rem; border-radius: .2rem;
   }
@@ -275,96 +261,267 @@
   .warn { color: var(--accent); font-size: .8rem; }
   footer { border-top: 1px solid var(--hairline); padding: 1.9rem 0 3rem;
            font-size: .77rem; color: var(--ink-3); }
+
+  /* ------------------------------------------------------------------ agent
+     User testing killed the previous layout: two of five readers never noticed
+     the agent at all, because it sat in the second section under four
+     paragraphs of hero copy. It is the entire point of the project, so it is
+     now the first thing on the page and the largest object on it. */
+
+  .stage { position: relative; overflow: hidden; border-top: 0;
+           padding: clamp(1.6rem, 4vw, 2.6rem) 0 clamp(2rem, 5vw, 3.4rem); }
+  /* A faint grid, sized in absolute units so it does not scale with the type,
+     plus a wash behind the console to lift it off the page. */
+  .stage::before {
+    content: ''; position: absolute; inset: -1px; pointer-events: none;
+    background:
+      radial-gradient(58rem 30rem at 22% -12%, var(--glow), transparent 68%),
+      linear-gradient(var(--mesh) 1px, transparent 1px) 0 0 / 100% 3rem,
+      linear-gradient(90deg, var(--mesh) 1px, transparent 1px) 0 0 / 3rem 100%;
+    /* The grid must not reach the bottom edge, or it reads as a table. */
+    mask-image: linear-gradient(#000 0%, #000 52%, transparent 96%);
+    -webkit-mask-image: linear-gradient(#000 0%, #000 52%, transparent 96%);
+  }
+  .stage > .wrap { position: relative; }
+
+  .stage-head { max-width: 46rem; margin-bottom: clamp(.85rem, 2vw, 1.3rem); }
+  .stage-head h1 { margin-bottom: .7rem; max-width: 22ch;
+                   font-size: clamp(1.85rem, 4.2vw, 2.9rem); }
+  .stage-head .lead { margin-bottom: 0; max-width: 40rem; }
+
+  .console {
+    position: relative; border-radius: .9rem; background: var(--surface-1);
+    border: 1px solid var(--hairline); box-shadow: var(--shadow);
+    display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
+  }
+  /* A gradient hairline along the top edge, drawn as a child so it survives the
+     rounded corners without a second border. */
+  .console::after {
+    content: ''; position: absolute; inset: 0 0 auto; height: 2px;
+    background: linear-gradient(90deg, var(--ui), var(--accent) 78%, transparent);
+    opacity: .85;
+  }
+
+  .console-head {
+    display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+    padding: .7rem 1.1rem; border-bottom: 1px solid var(--hairline);
+    background: var(--surface-2);
+    font-family: var(--f-data); font-size: .68rem; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .console-head .who { color: var(--ink-1); letter-spacing: .04em; }
+  .console-head .sep { opacity: .4; }
+  #agentState { color: var(--ui); letter-spacing: .04em; text-transform: none;
+                font-size: .72rem; }
+  .dot { width: .42rem; height: .42rem; border-radius: 50%; flex: none;
+         background: var(--ui); }
+  .dot.live { animation: breathe 1.5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { opacity: .3; transform: scale(.75); }
+                       50% { opacity: 1; transform: scale(1.15); } }
+
+  /* Scrolls rather than growing without bound, so the composer stays reachable
+     without hunting for it after a long answer. */
+  .thread { padding: 1.1rem; display: grid; gap: 1rem; align-content: start;
+            max-height: min(26rem, 40vh); overflow-y: auto; overscroll-behavior: contain; }
+  /* A short window is where this gets tight, so the thread yields first. */
+  @media (max-height: 46rem) { .thread { max-height: 34vh; } }
+  .msg { display: grid; gap: .3rem; }
+  .msg .from { font-family: var(--f-data); font-size: .63rem; letter-spacing: .11em;
+               text-transform: uppercase; color: var(--ink-3); }
+  .msg .txt { font-size: .93rem; line-height: 1.62; white-space: pre-wrap;
+              overflow-wrap: anywhere; }
+  .msg.you { justify-items: end; }
+  .msg.you .txt {
+    background: var(--ui); color: var(--on-ui); padding: .5rem .85rem;
+    border-radius: .8rem .8rem .2rem .8rem; max-width: min(30rem, 88%);
+    font-size: .89rem; box-shadow: 0 .2rem .6rem var(--glow);
+  }
+  .msg.bot .txt { max-width: 44rem; }
+  .msg.bot .txt strong { color: var(--ink-1); }
+  .msg.bot.first .txt { font-size: .97rem; }
+  .msg .trail { margin-top: .55rem; }
+
+  .composer { display: flex; gap: .45rem; padding: .8rem 1.1rem 1.1rem;
+              border-top: 1px solid var(--hairline); background: var(--surface-2); }
+  .composer input {
+    flex: 1; min-width: 0; font: inherit; font-size: .95rem;
+    padding: .72rem .9rem; border-radius: .55rem; color: var(--ink-1);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .composer input::placeholder { color: var(--ink-3); }
+  .composer input:focus { outline: none; border-color: var(--ui);
+                          box-shadow: 0 0 0 3px var(--glow); }
+  .composer button {
+    font: inherit; font-size: .9rem; font-weight: 600; padding: .72rem 1.3rem;
+    cursor: pointer; border: none; border-radius: .55rem;
+    background: var(--ui); color: var(--on-ui); white-space: nowrap;
+    transition: filter .18s var(--ease), transform .18s var(--ease);
+  }
+  .composer button:hover:not([disabled]) { filter: brightness(1.08); transform: translateY(-1px); }
+  .composer button[disabled] { opacity: .45; cursor: default; transform: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin: .85rem 0 0; }
+  .chip { font: inherit; font-size: .78rem; padding: .36rem .75rem; cursor: pointer;
+          background: var(--surface-1); color: var(--ink-2);
+          border: 1px solid var(--hairline); border-radius: 1.2rem; }
+  .chip { transition: border-color .18s var(--ease), color .18s var(--ease),
+                      transform .18s var(--ease), box-shadow .18s var(--ease); }
+  .chip:hover { color: var(--ui); border-color: var(--ui); transform: translateY(-1px);
+                box-shadow: 0 .25rem .7rem var(--glow); }
+  .chiphint { font-family: var(--f-data); font-size: .63rem; letter-spacing: .11em;
+              text-transform: uppercase; color: var(--ink-3); margin: 1.1rem 0 0; }
+
+  /* Headline numbers beside the console: three figures instead of two
+     paragraphs, because the readers who skipped the prose still read numbers. */
+  .stat-rail { display: grid; gap: .8rem; align-content: start; }
+  .stat { border: 1px solid var(--hairline); border-radius: .7rem;
+          background: var(--surface-1); padding: .85rem .95rem; }
+  .stat .v { font-family: var(--f-display); font-weight: 800; letter-spacing: -.03em;
+             font-size: clamp(1.9rem, 4.4vw, 2.5rem); line-height: 1;
+             color: var(--ink-1); font-variant-numeric: tabular-nums; }
+  .stat.hot .v { color: var(--accent); }
+  .stat .l { font-size: .78rem; color: var(--ink-2); margin-top: .3rem; line-height: 1.4; }
+  .console-grid { display: grid; gap: clamp(1rem, 2.4vw, 1.5rem); grid-template-columns: 1fr; }
+  @media (min-width: 62rem) { .console-grid { grid-template-columns: 1fr 15rem; } }
+
+  /* --------------------------------------------------------------- docked bar
+     Insurance against the original failure. Once the console scrolls away the
+     agent is still one click off, wherever the reader has got to. */
+  .dock {
+    position: fixed; z-index: 60; left: 50%; bottom: 1rem;
+    width: min(41rem, calc(100% - 1.6rem));
+    transform: translate(-50%, 150%); opacity: 0; pointer-events: none;
+    display: flex; gap: .4rem; align-items: center;
+    padding: .5rem .5rem .5rem .9rem; border-radius: 2rem;
+    background: var(--glass); border: 1px solid var(--glass-line);
+    backdrop-filter: blur(14px) saturate(1.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    box-shadow: 0 .7rem 2rem rgba(0,0,0,.19);
+    transition: transform .34s var(--ease), opacity .34s var(--ease);
+  }
+  .dock.up { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  .dock input { flex: 1; min-width: 0; font: inherit; font-size: .87rem;
+                background: none; border: 0; color: var(--ink-1); padding: .35rem 0; }
+  .dock input:focus { outline: none; }
+  .dock input::placeholder { color: var(--ink-3); }
+  .dock button { font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
+                 border: 0; border-radius: 1.5rem; padding: .5rem 1.05rem;
+                 background: var(--ui); color: var(--on-ui); white-space: nowrap; }
+  .dock button:hover { filter: brightness(1.08); }
+  .dock .lbl { font-family: var(--f-data); font-size: .6rem; letter-spacing: .1em;
+               text-transform: uppercase; color: var(--ink-3); flex: none; }
+  @media (max-width: 34rem) { .dock .lbl { display: none; } }
+
+  /* ------------------------------------------------------- less text on screen
+     The prose is not deleted, it is folded. Readers who wanted the detail can
+     still get it; readers who bounced off a wall of text now see a line. */
+  .disc { border: 1px solid var(--hairline); border-radius: .5rem;
+          background: var(--surface-1); margin-top: .5rem; }
+  .disc + .disc { margin-top: .4rem; }
+  .disc > summary {
+    cursor: pointer; list-style: none; padding: .6rem .85rem;
+    font-size: .85rem; font-weight: 600; color: var(--ink-1);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .disc > summary::marker, .disc > summary::-webkit-details-marker { display: none; }
+  .disc > summary::before {
+    content: '+'; font-family: var(--f-data); color: var(--ui); font-weight: 700;
+    width: .8rem; flex: none; text-align: center;
+  }
+  .disc[open] > summary::before { content: '\2212'; }
+  .disc > summary:hover { color: var(--ui); }
+  .disc .inner { padding: 0 .85rem .8rem 2.15rem; }
+  .disc .inner p { font-size: .86rem; margin: 0 0 .6rem; }
+  .disc .inner p:last-child { margin-bottom: 0; }
+  .discs { margin-top: 1rem; max-width: 46rem; }
+
+  .sectionline { font-size: .95rem; color: var(--ink-2); max-width: 42rem;
+                 margin: 0 0 1.3rem; }
+
+  /* Scroll reveal. Opt-in per element and disabled outright for readers who ask
+     for less motion, in which case everything is simply visible. */
+  .rv { opacity: 0; transform: translateY(14px);
+        transition: opacity .6s var(--ease), transform .6s var(--ease); }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .rv { opacity: 1; transform: none; }
+    .dot.live { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  nav { background: var(--glass); backdrop-filter: blur(12px) saturate(1.4);
+        -webkit-backdrop-filter: blur(12px) saturate(1.4);
+        border-bottom: 1px solid var(--glass-line); }
+  .navcta { font-family: var(--f-body); font-size: .78rem; font-weight: 600;
+            color: var(--ui) !important; border: 1px solid var(--ui);
+            border-radius: 1.2rem; padding: .22rem .7rem !important; }
+  .navcta:hover { background: var(--ui); color: var(--on-ui) !important;
+                  border-bottom-color: var(--ui); }
 </style>
 </head>
 <body>
 
 <nav><div class="wrap">
   <b>Respite</b>
-  <a href="#ask" class="keep">Ask the agent</a>
   <a href="#night">Why night</a>
   <a href="#map-sec">Map</a>
   <a href="#gap">The gap</a>
-  <a href="#missed">Who is missed</a>
+  <a href="#limits">Limits</a>
   <span class="spacer"></span>
   <span class="navtag">Phoenix &middot; 15 Aug 2026</span>
+  <a href="#ask" class="keep navcta">Ask the agent</a>
   <button id="theme" class="themebtn" title="Switch theme" aria-label="Switch theme">Auto</button>
 </div></nav>
 
-<section><div class="wrap">
-  <div class="hero-grid">
-    <div>
-      <p class="eyebrow">Overnight heat, measured street by street</p>
-      <h1>Some neighbourhoods never cool down.</h1>
-      <p class="lead">On one August night in Phoenix, <strong>18 census tracts stayed above
-      28&nbsp;&deg;C from midnight until dawn</strong>. The air never once dropped below it.
-      Four kilometres away, another tract spent most of the night below that line.</p>
-      <p class="lead">Heat kills at night, when the body needs a cool window to recover.
-      The index cities use to decide where to help does not find these places.</p>
+<section id="ask" class="stage"><div class="wrap">
+  <div class="stage-head">
+    <p class="eyebrow">Phoenix overnight heat &middot; 134 neighbourhoods</p>
+    <h1>Ask which blocks never cool down.</h1>
+    <p class="lead">An agent that reads the temperature measurements for you, and tells you
+    when they cannot answer your question.</p>
+  </div>
+
+  <div class="console-grid">
+    <div class="console">
+      <div class="console-head">
+        <span class="dot live" id="stateDot"></span>
+        <span class="who">Respite agent</span>
+        <span class="sep">/</span>
+        <span id="agentState">starting up</span>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+      <div class="composer">
+        <input id="q" type="text" placeholder="Ask about a neighbourhood, or what to do about it"
+               aria-label="Ask the agent a question">
+        <button id="ask-btn">Ask</button>
+      </div>
     </div>
-    <div>
-      <div class="hero-fig" id="heroFig">18</div>
-      <p style="font-size:.82rem;margin:.4rem 0 0">tracts with <strong>no relief at all</strong>,
-      home to <span class="mono" id="heroPop">58,176</span> people</p>
+
+    <div class="stat-rail">
+      <div class="stat hot">
+        <div class="v" id="heroFig" data-count="18">18</div>
+        <div class="l">tracts never dropped below 28&nbsp;&deg;C all night</div>
+      </div>
+      <div class="stat">
+        <div class="v" id="heroPop" data-count="58176">58,176</div>
+        <div class="l">people living in them</div>
+      </div>
+      <div class="stat">
+        <div class="v">0.004</div>
+        <div class="l">correlation with the index cities use to target help</div>
+      </div>
     </div>
   </div>
-  <div class="kpis" id="kpis"></div>
-</div></section>
 
-<section id="ask"><div class="wrap">
-  <p class="eyebrow">The agent, working unprompted</p>
-  <h2>Nobody asked it anything yet.</h2>
-  <p>This briefing was written by the agent on its own, by reading the measurements
-  below and the public health literature, before you arrived. It decided what mattered
-  and what you would need explained. The sources it consulted are listed underneath.</p>
-
-  <div class="brief" id="brief">
-    <div class="brief-body" id="briefBody">Writing the briefing.</div>
-    <div class="trail" id="briefTrail" hidden></div>
-  </div>
-
-  <h3 style="margin-top:2rem">Then ask it anything</h3>
-  <p>It answers from the same measurements. Where the data cannot support an answer it
-  says so instead of guessing, and it separates what we measured here from what is
-  established in the literature.</p>
-  <div class="askrow">
-    <input id="q" type="text" placeholder="Why does this matter?" aria-label="Ask a question">
-    <button id="ask-btn">Ask</button>
-  </div>
+  <p class="chiphint">Try asking</p>
   <div class="chips" id="chips"></div>
-  <div class="answer" id="answer"></div>
-  <div class="trail" id="trail" hidden></div>
 </div></section>
 
 <section id="night"><div class="wrap">
   <p class="eyebrow">Why the night is what matters</p>
-  <h2>Two tracts, the same night, one line between them.</h2>
-  <p>Afternoon maps show the whole city as uniformly hot, because at four o'clock it is.
-  The difference appears after dark: some ground gives back the day's heat and some does
-  not. Overnight minimum temperature predicts heat deaths better than the daytime peak,
-  because a body that never cools never recovers.</p>
-
-  <div class="limits" style="margin-bottom:1.5rem">
-    <div class="limit">
-      <div class="k">What the number is</div>
-      <p>Hours of the night, midnight to dawn, that the outdoor air stayed above
-      28&nbsp;&deg;C (about 82&nbsp;&deg;F). Six hours means the whole window: it never once
-      dropped below that line.</p>
-    </div>
-    <div class="limit">
-      <div class="k">Why the night, not the day</div>
-      <p>The body sheds accumulated heat when the air is cooler than skin. A hot night
-      removes that recovery window, so the strain from the previous day carries into the
-      next. Overnight minimum temperature predicts heat deaths better than the daytime
-      peak, which is why multi-day heat events are more lethal than single hot days.</p>
-    </div>
-    <div class="limit">
-      <div class="k">Indoors is worse</div>
-      <p>A building that absorbed heat all day keeps releasing it inside for hours after
-      the outside air drops. The readings here are outdoor air at head height, so the
-      temperature people actually sleep in is generally higher.</p>
-    </div>
-  </div>
+  <h2>Two tracts, the same night.</h2>
+  <p class="sectionline">One drops below the line and recovers. The other never does.</p>
 
   <figure>
     <div class="legend" id="curveLegend"></div>
@@ -377,15 +534,34 @@
       <div class="tablewrap" id="curveTable"></div>
     </details>
   </figure>
+
+  <div class="discs">
+    <details class="disc"><summary>What the number actually measures</summary>
+      <div class="inner"><p>Hours of the night, midnight to dawn, that the outdoor air
+      stayed above 28&nbsp;&deg;C (about 82&nbsp;&deg;F). Six hours means the whole window:
+      it never once dropped below that line.</p></div>
+    </details>
+    <details class="disc"><summary>Why the night rather than the afternoon</summary>
+      <div class="inner"><p>Afternoon maps show the whole city as uniformly hot, because at
+      four o'clock it is. The difference appears after dark, when some ground gives back
+      the day's heat and some does not.</p>
+      <p>The body sheds accumulated heat when the air is cooler than skin, so a hot night
+      removes the recovery window and the strain from the previous day carries into the
+      next. Overnight minimum temperature predicts heat deaths better than the daytime
+      peak, which is why multi-day heat events are more lethal than single hot days.</p></div>
+    </details>
+    <details class="disc"><summary>Indoors is worse than this</summary>
+      <div class="inner"><p>A building that absorbed heat all day keeps releasing it inside
+      for hours after the outside air drops. These readings are outdoor air at head height,
+      so the temperature people actually sleep in is generally higher.</p></div>
+    </details>
+  </div>
 </div></section>
 
 <section id="map-sec"><div class="wrap">
   <p class="eyebrow">The whole study area</p>
   <h2>Hours without relief, by neighbourhood.</h2>
-  <p>Each tract below is measured from roughly 48,000 temperature readings taken 100
-  metres apart, two metres above the ground, then averaged over the tract's area. The
-  scale runs from tracts that got a few hours of relief to tracts that never dropped
-  below 28&nbsp;&deg;C at all.</p>
+  <p class="sectionline">Click any neighbourhood and the agent explains that one.</p>
 
   <div class="maprow">
     <div id="map"></div>
@@ -393,15 +569,16 @@
       <h3>Reading the map</h3>
       <div class="ramp" id="ramp"></div>
       <div class="rampends"><span>3 h of relief</span><span>none at all</span></div>
-      <p style="font-size:.81rem">Tracts at the right-hand end of the scale never went
-      below 28&nbsp;&deg;C between midnight and dawn. Those at the left had about three
-      hours of genuine relief.</p>
-      <p style="font-size:.75rem;color:var(--ink-3)">The scale flips lightness between
-      themes on purpose: on a pale background the low end recedes, on a dark one it is the
-      high end that has to advance. Either way, left is more relief and right is none.</p>
-      <p style="font-size:.81rem">Hover any tract for its own numbers.</p>
+      <p style="font-size:.79rem">Left of the scale is three hours of genuine relief.
+      Right is none at all.</p>
       <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
-      <p class="hint">Click any tract and the agent will explain it.</p>
+      <details class="disc"><summary>How this was measured</summary>
+        <div class="inner"><p>Roughly 48,000 readings taken 100 metres apart, two metres
+        above the ground, area-averaged over each tract.</p>
+        <p>The scale flips lightness between themes on purpose: on a pale background the
+        low end should recede, on a dark one it is the high end that has to advance.
+        Either way, left is more relief and right is none.</p></div>
+      </details>
     </aside>
   </div>
 </div></section>
@@ -409,12 +586,8 @@
 <section id="gap"><div class="wrap">
   <p class="eyebrow">The finding</p>
   <h2>Heat and disadvantage do not line up here.</h2>
-  <p>Heat programmes are usually aimed using a social vulnerability index, which assumes
-  the most vulnerable places are also the hottest. In this study area the two are
-  unrelated: the correlation between overnight exposure and the CDC index is
-  <strong class="mono">r&nbsp;=&nbsp;0.004</strong>.</p>
-  <p>Each dot is one tract. If the assumption held, the dots would climb from left to
-  right. They do not. That flat cloud is the finding.</p>
+  <p class="sectionline">If the assumption cities target on held, these dots would climb
+  from left to right. <strong class="mono">r&nbsp;=&nbsp;0.004</strong>.</p>
 
   <figure>
     <div class="legend" id="scatterLegend"></div>
@@ -427,6 +600,18 @@
       <div class="tablewrap" id="scatterTable"></div>
     </details>
   </figure>
+
+  <div class="discs">
+    <details class="disc"><summary>Why that flat cloud is the whole point</summary>
+      <div class="inner"><p>Heat programmes are usually aimed using a social vulnerability
+      index, on the assumption that the most vulnerable places are also the hottest. In
+      this study area the two are unrelated, so a programme aimed by the index alone will
+      miss hot places and visit cool ones.</p>
+      <p>We checked the obvious explanations for a null result. It is not range
+      restriction and not a ceiling effect: excluding the capped tracts still gives
+      r&nbsp;=&nbsp;-0.070, and the mid-range gives -0.272.</p></div>
+    </details>
+  </div>
 </div></section>
 
 <section id="missed"><div class="wrap">
@@ -443,34 +628,30 @@
 <section id="limits"><div class="wrap">
   <p class="eyebrow">What this does not show</p>
   <h2>The claims we tested and could not support.</h2>
-  <p>These are here because a tool that only reports what it found is harder to trust than
-  one that also says where it stops.</p>
-  <div class="limits">
-    <div class="limit">
-      <div class="k">No intervention effects</div>
-      <p>We sampled surface composition at 50 tracts to test whether pavement and canopy
-      explain overnight heat. Once position is accounted for, they do not: built surface
-      gives <span class="mono">t&nbsp;=&nbsp;+0.24</span>, vegetation
+  <p class="sectionline">A tool that only reports what it found is harder to trust than one
+  that says where it stops. The agent reads this list before it answers.</p>
+  <div class="discs">
+    <details class="disc"><summary>We cannot tell you what an intervention would buy</summary>
+      <div class="inner"><p>We sampled surface composition at 50 tracts to test whether
+      pavement and canopy explain overnight heat. Once position is accounted for, they do
+      not: built surface gives <span class="mono">t&nbsp;=&nbsp;+0.24</span>, vegetation
       <span class="mono">t&nbsp;=&nbsp;-1.46</span>. So this tool never estimates how much
-      cooling any intervention would buy.</p>
-    </div>
-    <div class="limit">
-      <div class="k">Position, not mechanism</div>
-      <p>Latitude and longitude alone explain about 70% of the variation. Something about
-      where a tract sits drives this, but we did not test what. Elevation, drainage and
-      distance from open desert are all untested candidates.</p>
-    </div>
-    <div class="limit">
-      <div class="k">A ceiling on the metric</div>
-      <p>The measure caps at six hours. Tracts at the cap were above 28&nbsp;&deg;C for the
-      whole window and we cannot tell which was hottest, so they are not ranked against
-      each other.</p>
-    </div>
-    <div class="limit">
-      <div class="k">One night, one city</div>
-      <p>15 August 2026, 134 tracts in central Phoenix. Nothing here should be read as
-      applying to another city, season or date.</p>
-    </div>
+      cooling any intervention would buy, and the agent refuses to when asked.</p></div>
+    </details>
+    <details class="disc"><summary>We found position, not mechanism</summary>
+      <div class="inner"><p>Latitude and longitude alone explain about 70% of the variation.
+      Something about where a tract sits drives this, but we did not test what. Elevation,
+      drainage and distance from open desert are all untested candidates.</p></div>
+    </details>
+    <details class="disc"><summary>The metric has a ceiling, so the worst places are tied</summary>
+      <div class="inner"><p>The measure caps at six hours. Tracts at the cap were above
+      28&nbsp;&deg;C for the whole window and we cannot tell which was hottest, so they are
+      not ranked against each other.</p></div>
+    </details>
+    <details class="disc"><summary>One night, one city</summary>
+      <div class="inner"><p>15 August 2026, 134 tracts in central Phoenix. Nothing here
+      should be read as applying to another city, season or date.</p></div>
+    </details>
   </div>
 </div></section>
 
@@ -503,16 +684,8 @@ async function loadHeadline() {
     fetch('/api/summary').then(r => r.json()),
     fetch('/api/divergence').then(r => r.json())
   ]);
-  document.getElementById('heroFig').textContent = sum.tracts_with_no_relief;
-  document.getElementById('heroPop').textContent = fmt(sum.population_with_no_relief || 0);
-
-  const bs = (div.quadrants && div.quadrants.blind_spot) || { tracts: 0, population: 0, over_65: 0 };
-  document.getElementById('kpis').innerHTML = [
-    [sum.tracts, 'census tracts measured across central Phoenix'],
-    [sum.spread_hours + ' h', 'between the tract with the most relief and those with none'],
-    ['r = ' + div.correlation_exposure_vs_svi, 'correlation between overnight heat and the vulnerability index'],
-    [bs.tracts + ' of ' + div.severe_tracts, 'worst-exposed tracts fall outside the targeted band']
-  ].map(([v, l]) => '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>').join('');
+  countTo(document.getElementById('heroFig'), sum.tracts_with_no_relief);
+  countTo(document.getElementById('heroPop'), sum.population_with_no_relief || 0);
 
   document.getElementById('mapKpis').innerHTML = [
     [sum.max_relief_hours + ' h', 'most relief any tract got'],
@@ -811,24 +984,79 @@ const SUGGESTIONS = [
   'Would cool pavement help tract 1085.02?'
 ];
 
+// One thread, so the unprompted briefing and the reader's own questions are
+// visibly the same agent rather than two separate features. The briefing arriving
+// on its own is also what makes the point that it acts without being asked.
+const thread = () => document.getElementById('thread');
+
+function addMsg(who, cls) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + (who === 'you' ? 'you' : 'bot') + (cls ? ' ' + cls : '');
+  el.innerHTML = '<div class="from">' + (who === 'you' ? 'You' : 'Respite agent')
+    + '</div><div class="txt"></div>';
+  thread().appendChild(el);
+  return { txt: el.querySelector('.txt'), root: el };
+}
+
+function addTrail(msg) {
+  const t = document.createElement('div');
+  t.className = 'trail';
+  t.hidden = true;
+  msg.root.appendChild(t);
+  return t;
+}
+
+// Scrolls the thread only, never the page. scrollIntoView on a nested scroller
+// moves the document too, which fought the sticky nav.
+//
+// A near-bottom guard was the first attempt and it was wrong: it measured
+// against the briefing, which is long enough that the thread is never near its
+// bottom, so it suppressed every scroll and answers arrived out of sight. The
+// reader asked the question, so they get taken to the result.
+function follow(el, where) {
+  const box = thread();
+  if (where === 'end') {
+    box.scrollTop = box.scrollHeight;
+    return;
+  }
+  // Put the top of the answer at the top of the box, so a long one is read from
+  // its beginning rather than its last line.
+  const delta = el.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  box.scrollTop += delta - 8;
+}
+
+function setState(text, live) {
+  const el = document.getElementById('agentState');
+  const dot = document.getElementById('stateDot');
+  if (el) el.textContent = text;
+  if (dot) dot.classList.toggle('live', !!live);
+}
+
 async function loadBriefing() {
-  const body = document.getElementById('briefBody');
-  const trail = document.getElementById('briefTrail');
-  const stop = startTicker(body, 'Writing the briefing');
+  const msg = addMsg('bot', 'first');
+  const trail = addTrail(msg);
+  setState('reading the measurements', true);
+  const stop = startTicker(msg.txt, 'Writing an opening briefing, unprompted');
   try {
     const r = await fetch('/api/briefing');
     const b = await r.json();
     stop();
-    if (!r.ok) { body.textContent = b.detail || ('Briefing unavailable: ' + r.status);
-                 body.className = 'brief-body warn'; return; }
+    if (!r.ok) {
+      msg.txt.textContent = b.detail || ('Briefing unavailable: ' + r.status);
+      msg.txt.classList.add('warn');
+      setState('briefing unavailable, everything else works', false);
+      return;
+    }
     // The agent writes markdown-ish bold; render just that, escaping the rest.
-    body.innerHTML = mdLite(b.answer);
+    msg.txt.innerHTML = mdLite(b.answer);
     const tools = (b.audit_trail || []).map(x => x.tool);
+    setState('ready, ask it anything', false);
     if (tools.length) await revealTools(trail, tools, b.consulted_limits);
   } catch (e) {
     stop();
-    body.textContent = 'Briefing unavailable. Every measurement on this page is unaffected.';
-    body.className = 'brief-body warn';
+    msg.txt.textContent = 'Briefing unavailable. Every measurement on this page is unaffected.';
+    msg.txt.classList.add('warn');
+    setState('briefing unavailable, everything else works', false);
   }
 }
 // Honest progress: the elapsed counter is real, and the tool list afterwards is
@@ -858,15 +1086,29 @@ async function revealTools(el, tools, consultedLimits) {
   }
 }
 
-async function ask() {
-  const btn = document.getElementById('ask-btn');
-  const out = document.getElementById('answer');
-  const trail = document.getElementById('trail');
-  const question = document.getElementById('q').value.trim();
-  if (!question) return;
-  btn.disabled = true;
-  const stop = startTicker(out, 'Reading the measurements');
-  trail.hidden = true;
+let asking = false;
+
+async function ask(text) {
+  const q = document.getElementById('q');
+  const dq = document.getElementById('dockq');
+  const question = (text || q.value || (dq && dq.value) || '').trim();
+  if (!question || asking) return;
+  asking = true;
+  const btns = document.querySelectorAll('#ask-btn, #dock-btn');
+  btns.forEach(b => b.disabled = true);
+  q.value = '';
+  if (dq) dq.value = '';
+
+  // The question goes in the thread before the request leaves, so a slow answer
+  // still looks like a conversation rather than a dead input.
+  const mine = addMsg('you');
+  mine.txt.textContent = question;
+  const msg = addMsg('bot');
+  const trail = addTrail(msg);
+  follow(mine.root, 'end');
+  setState('reading the measurements', true);
+  const stop = startTicker(msg.txt, 'Reading the measurements');
+
   try {
     const res = await fetch('/api/agent', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -874,22 +1116,113 @@ async function ask() {
     });
     const body = await res.json();
     stop();
-    if (!res.ok) { out.textContent = body.detail || ('Request failed: ' + res.status); return; }
-    out.innerHTML = mdLite(body.answer || '(no answer)');
-    const calls = (body.audit_trail || []).map(s => s.tool);
+    if (!res.ok) {
+      msg.txt.textContent = body.detail || ('Request failed: ' + res.status);
+      msg.txt.classList.add('warn');
+      setState('ready, ask it anything', false);
+      return;
+    }
+    msg.txt.innerHTML = mdLite(body.answer || '(no answer)');
+    const calls = (body.audit_trail || []).map(x => x.tool);
+    setState('ready, ask it anything', false);
+    follow(mine.root);
     if (calls.length) await revealTools(trail, calls, body.consulted_limits);
   } catch (e) {
-    out.textContent = 'Could not reach the analysis: ' + (e && e.message ? e.message : e);
-  } finally { stop(); btn.disabled = false; }
+    stop();
+    msg.txt.textContent = 'Could not reach the analysis: ' + (e && e.message ? e.message : e);
+    msg.txt.classList.add('warn');
+    setState('ready, ask it anything', false);
+  } finally {
+    stop();
+    asking = false;
+    btns.forEach(b => b.disabled = false);
+  }
 }
-document.getElementById('ask-btn').addEventListener('click', ask);
+
+document.getElementById('ask-btn').addEventListener('click', () => ask());
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
 document.getElementById('chips').innerHTML =
   SUGGESTIONS.map(s => '<button class="chip">' + esc(s) + '</button>').join('');
 document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
-  document.getElementById('q').value = c.textContent;
-  ask();
+  // Sending straight away rather than filling the box: a chip that only types
+  // for you still needs a second click nobody makes.
+  document.getElementById('ask').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  ask(c.textContent);
 }));
+
+// The docked bar. Two readers in testing never found the agent at all, so once
+// the console leaves the screen a compact version of it follows them down.
+(function dock() {
+  const bar = document.createElement('div');
+  bar.className = 'dock';
+  bar.innerHTML = '<span class="lbl">Ask the agent</span>'
+    + '<input id="dockq" type="text" aria-label="Ask the agent a question" '
+    + 'placeholder="Which neighbourhoods are worst?">'
+    + '<button id="dock-btn">Ask</button>';
+  document.body.appendChild(bar);
+
+  const jump = () => document.getElementById('ask').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('dock-btn').addEventListener('click', () => { jump(); ask(); });
+  document.getElementById('dockq').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { jump(); ask(); }
+  });
+
+  // Shown only while the console itself is off screen, so the two never compete.
+  const panel = document.querySelector('#ask .console');
+  if (!panel) return;
+  const sync = () => bar.classList.toggle('up', panel.getBoundingClientRect().bottom < 64);
+  addEventListener('scroll', sync, { passive: true });
+  addEventListener('resize', sync, { passive: true });
+  sync();
+})();
+
+// Reveal on scroll, and count the headline figures up. Both are decoration, so
+// both are skipped when the reader asks for less motion and the content is
+// simply there.
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function revealOnScroll() {
+  const items = [...document.querySelectorAll('section:not(.stage) > .wrap > *')];
+  if (REDUCE || !('IntersectionObserver' in window)) return;
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px' });
+
+  const hidden = items.filter(el => {
+    // Anything already on screen is left alone. Fading in what the reader is
+    // looking at is not an effect, it is a flicker.
+    if (el.getBoundingClientRect().top < innerHeight * 0.95) return false;
+    el.classList.add('rv');
+    io.observe(el);
+    return true;
+  });
+
+  // Insurance. If the callback never arrives, and it does not in a browser that
+  // is not painting the page, this is the difference between a styled page and
+  // an apparently empty one.
+  setTimeout(() => hidden.forEach(el => el.classList.add('in')), 2500);
+}
+
+function countTo(el, value) {
+  if (!el) return;
+  const target = Number(value) || 0;
+  if (REDUCE) { el.textContent = fmt(target); return; }
+  const dur = 900;
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / dur);
+    // Ease out, so it decelerates into the real figure instead of stopping dead.
+    const eased = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(Math.round(target * eased));
+    if (k < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(target);
+  };
+  requestAnimationFrame(step);
+}
+revealOnScroll();
 
 // Theme: three states, remembered. System is the default so the page respects
 // the reader's own setting until they choose otherwise.

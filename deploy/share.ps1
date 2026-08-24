@@ -90,11 +90,33 @@ if (-not $url) {
     throw "The tunnel never reported a hostname. See $log."
 }
 
+# cloudflared prints the hostname as soon as the tunnel registers, which is
+# before the name resolves. A quick tunnel has also been seen to register, lose
+# its control stream, and leave a hostname that never resolves at all. Handing
+# that address to the team wastes their afternoon and looks like a broken app, so
+# it is checked from the public side before being printed.
+Write-Host 'Waiting for the address to answer...' -ForegroundColor Cyan
+$live = $false
+foreach ($i in 1..24) {
+    try {
+        $probe = Invoke-RestMethod "$url/health" -TimeoutSec 6
+        if ($probe.status -eq 'ok') { $live = $true; break }
+    } catch { }
+    Start-Sleep -Seconds 5
+}
+
 Write-Host ''
 Write-Host "  $url" -ForegroundColor Green
 Write-Host ''
-Write-Host '  Send that to the team. It stops working when this window closes,' -ForegroundColor DarkGray
-Write-Host '  and a new run gets a different address.' -ForegroundColor DarkGray
+if ($live) {
+    Write-Host '  Answering from the public side. Send it to the team.' -ForegroundColor DarkGray
+} else {
+    Write-Host '  The tunnel registered but the address is not answering yet.' -ForegroundColor Yellow
+    Write-Host '  Give it a few minutes. If it stays dead, Ctrl+C and run this again:' -ForegroundColor Yellow
+    Write-Host '  a fresh hostname is usually quicker than waiting for a stuck one.' -ForegroundColor Yellow
+}
+Write-Host '  It stops working when this window closes, and a new run gets a' -ForegroundColor DarkGray
+Write-Host '  different address.' -ForegroundColor DarkGray
 Write-Host ''
 Set-Clipboard -Value $url -ErrorAction SilentlyContinue
 Write-Host 'Copied to the clipboard. Ctrl+C here to take it down.' -ForegroundColor DarkGray

@@ -12,6 +12,7 @@ deliberate offline step (``scripts/build_layer.py``), never a page load.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -33,6 +34,8 @@ STATIC = Path(__file__).resolve().parent / "static"
 # in .env while /api/agent reported none configured. Real environment variables
 # still win, which is what a host like systemd or a scheduled task will set.
 load_dotenv(ROOT / ".env", override=False)
+
+log = logging.getLogger("respite.api")
 
 app = FastAPI(
     title="Respite",
@@ -208,6 +211,24 @@ def curves(pair: bool = True) -> dict:
     }
 
 
+def _upstream_failure(exc: Exception) -> HTTPException:
+    """Turn a provider failure into something safe to show a stranger.
+
+    The provider's message is not: it echoes the API key masked only at its ends,
+    names the provider, and links to its dashboard. It is logged instead, where it
+    is useful, and the reader gets a sentence that tells them what still works.
+    """
+    log.warning("agent call failed: %s: %s", type(exc).__name__, exc)
+    return HTTPException(
+        status_code=502,
+        detail=(
+            "The agent could not be reached just now. Every measurement on this "
+            "page, the map and both charts are unaffected, and the numbers they "
+            "show do not depend on it."
+        ),
+    )
+
+
 def _agent_or_503(request: Request | None = None):
     """Shared guard so every agent-backed endpoint fails the same way.
 
@@ -256,7 +277,7 @@ def briefing(request: Request, refresh: bool = False) -> dict:
     try:
         brief = run(BRIEFING_PROMPT, model)
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+        raise _upstream_failure(exc) from exc
 
     _briefing_cache = {
         **brief.to_dict(),
@@ -286,7 +307,7 @@ def explain(geoid: str, request: Request) -> dict:
     try:
         brief = run(prompt, model)
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+        raise _upstream_failure(exc) from exc
 
     _tract_cache[geoid] = {**brief.to_dict(), "geoid": geoid,
                            "name": check.get("name")}
@@ -310,8 +331,8 @@ def agent(payload: dict, request: Request) -> dict:
     run, model = _agent_or_503(request)
     try:
         brief = run(question, model)
-    except Exception as exc:  # noqa: BLE001 - surface provider failures as 502
-        raise HTTPException(status_code=502, detail=f"Model call failed: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001 - provider failures become a 502
+        raise _upstream_failure(exc) from exc
     return brief.to_dict()
 
 

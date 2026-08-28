@@ -904,7 +904,16 @@ const map = new maplibregl.Map({
            layers: [{ id: 'bg', type: 'background',
                       paint: { 'background-color': css('--surface-2') } }] },
   center: [-112.077, 33.494], zoom: 9.6,
-  attributionControl: { compact: true }
+  // Stated on the control rather than left to the sources: source attribution
+  // only appears once a tile actually loads, and this is a licence condition,
+  // not a nicety.
+  attributionControl: {
+    compact: true,
+    customAttribution: '<a href="https://www.openstreetmap.org/copyright" '
+      + 'target="_blank" rel="noopener">&copy; OpenStreetMap</a> contributors, '
+      + '<a href="https://carto.com/attributions" target="_blank" '
+      + 'rel="noopener">&copy; CARTO</a>'
+  }
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
@@ -1003,6 +1012,9 @@ async function drawMap() {
     };
     if (f.geometry) walk(f.geometry.coordinates);
   }
+  // Order matters: the canvas has to be its real size before the bounds are
+  // fitted to it, or the zoom is computed for a viewport that no longer exists.
+  fitMap();
   if (x1 > x0) map.fitBounds([[x0, y0], [x1, y1]], { padding: 28, duration: 0 });
 
   const pop = new maplibregl.Popup({ closeButton: false, offset: 8 });

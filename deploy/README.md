@@ -38,7 +38,7 @@ Use the rest of this document for anything that needs to stay up.
 |---|---|
 | Python 3.11+ | the app |
 | Outbound HTTPS from the box | nothing at request time; only `pip install` and `git` |
-| Outbound HTTPS from the *visitor's* browser | basemap tiles come from `basemaps.cartocdn.com` |
+| Outbound HTTPS from the *visitor's* browser | basemap tiles come from `tiles.openfreemap.org` |
 | `OPENAI_API_KEY` | only `/api/agent`, `/api/briefing`, `/api/explain` |
 | Ports 80 and 443 reaching the box | Caddy's certificate, already true for the existing sites |
 
@@ -203,7 +203,7 @@ Then open `https://respite.samtechpk.com` in a browser and check:
 - the existing sites on the box still load
 
 The basemap is the one part that depends on the visitor's network reaching
-`basemaps.cartocdn.com`. If tiles are blocked the tracts still draw, just with
+`tiles.openfreemap.org`. If tiles are blocked the tracts still draw, just with
 nothing underneath.
 
 ---
@@ -266,7 +266,7 @@ deliberately and never on a schedule. Raw responses cache under `data/raw/`
 | Site dies after a few days | `-ExecutionTimeLimit` was not set to 0 on the task |
 | `layer_present: false` | `data/processed/tracts_recovery.geojson` missing; run `build_layer.py` |
 | Page loads, no tracts | browser console; `/api/tracts` should return 134 features |
-| Map has no streets under the tracts | the visitor's network is blocking `basemaps.cartocdn.com` |
+| Map has no streets under the tracts | the visitor's network is blocking `tiles.openfreemap.org` |
 | Agent returns 503 | no `OPENAI_API_KEY` in the environment the task runs under |
 | Agent returns 429 | the spend budget. See the table above |
 | Stale numbers after a pull | the in-memory layer cache. Restart the task |

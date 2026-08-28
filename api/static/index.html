@@ -570,8 +570,8 @@
       <div class="ramp" id="ramp"></div>
       <div class="rampends"><span>3 h of relief</span><span>none at all</span></div>
       <p style="font-size:.79rem">Left of the scale is three hours of genuine relief.
-      Right is none at all. Streets and place names are underneath, so you can see
-      which neighbourhood each tract is.</p>
+      Right is none at all. Streets run underneath and place names sit on top, so
+      you can tell which neighbourhood each tract is.</p>
       <div class="kpis" style="grid-template-columns:1fr;margin-top:.9rem" id="mapKpis"></div>
       <details class="disc"><summary>How this was measured</summary>
         <div class="inner"><p>Roughly 48,000 readings taken 100 metres apart, two metres
@@ -898,21 +898,38 @@ function heatExpr() {
   BINS.forEach((b, i) => e.push(b, c[i + 1]));
   return e;
 }
+// OpenFreeMap, because it needs no key and says so as a policy rather than as a
+// free tier. The first attempt used Carto's open endpoints, which answer 200 with
+// a real PNG and stamp "API KEY REQUIRED" diagonally across every tile. A status
+// code is not proof a tile is usable, and that shipped to the deployed site.
+//
+// Vector rather than raster, which is also the better shape for this map: the
+// style has nineteen label layers, so the choropleth can be inserted underneath
+// them and place names stay legible over the data. The raster version needed a
+// second labels-only layer painted back on top to fake the same thing.
+const BASEMAP = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark'
+};
+
+// Which basemap to show is a question about the rendered theme, not about the
+// stored preference, because "auto" resolves to either. color-scheme is set by
+// every theme block, so it answers for all three states.
+const isDark = () =>
+  getComputedStyle(document.documentElement).colorScheme.indexOf('dark') === 0;
+
+let styleUrl = BASEMAP[isDark() ? 'dark' : 'light'];
+
 const map = new maplibregl.Map({
   container: 'map',
-  style: { version: 8, sources: {},
-           layers: [{ id: 'bg', type: 'background',
-                      paint: { 'background-color': css('--surface-2') } }] },
+  style: styleUrl,
   center: [-112.077, 33.494], zoom: 9.6,
-  // Stated on the control rather than left to the sources: source attribution
-  // only appears once a tile actually loads, and this is a licence condition,
-  // not a nicety.
   attributionControl: {
     compact: true,
-    customAttribution: '<a href="https://www.openstreetmap.org/copyright" '
-      + 'target="_blank" rel="noopener">&copy; OpenStreetMap</a> contributors, '
-      + '<a href="https://carto.com/attributions" target="_blank" '
-      + 'rel="noopener">&copy; CARTO</a>'
+    customAttribution: '<a href="https://openfreemap.org" target="_blank" '
+      + 'rel="noopener">OpenFreeMap</a>, &copy; <a '
+      + 'href="https://www.openstreetmap.org/copyright" target="_blank" '
+      + 'rel="noopener">OpenStreetMap</a> contributors'
   }
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
@@ -949,54 +966,69 @@ map.on('load', fitMap);
 addEventListener('resize', fitMap);
 new ResizeObserver(fitMap).observe(map.getContainer());
 
-const CARTO = (style) => ['a', 'b', 'c'].map(
-  h => 'https://' + h + '.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}@2x.png');
+// Kept so a theme swap does not have to refetch 540 KB of geometry.
+let tractData = null;
 
-// Which basemap to show is a question about the rendered theme, not about the
-// stored preference, because "auto" resolves to either. color-scheme is set by
-// every theme block, so it answers for all three states.
-const isDark = () =>
-  getComputedStyle(document.documentElement).colorScheme.indexOf('dark') === 0;
+// Where to slide the choropleth in: above all the ground geometry, below the
+// place names.
+//
+// Not simply the first symbol layer, which was the first attempt and was wrong.
+// In this style the first symbol is water_name at index 8 and every road layer
+// comes after it, so inserting there buried the entire street network under the
+// fill. The basemap was added to show streets, so that defeats the point.
+//
+// The last geometry layer is the real boundary. Scanning for it and taking
+// whatever follows puts water, landuse, buildings, roads, railways and
+// boundaries underneath, and leaves the place names on top. Undefined means
+// there is nothing above the geometry, in which case appending on top is right.
+function labelAnchor() {
+  const layers = (map.getStyle() || {}).layers || [];
+  let lastGeometry = -1;
+  for (let i = 0; i < layers.length; i++) {
+    if (layers[i].type !== 'symbol') lastGeometry = i;
+  }
+  const next = layers[lastGeometry + 1];
+  return next ? next.id : undefined;
+}
+
+// Idempotent, because it runs on every styledata event and those are frequent.
+// Colours are read here rather than passed in, so a re-add after a theme swap
+// picks up the new palette without a separate repaint.
+function addTractLayers() {
+  if (!tractData || map.getSource('t')) return;
+  // styledata fires more than once and can arrive before the layer list exists.
+  // Adding then would compute an anchor of undefined and drop the choropleth on
+  // top of the place names. A later event does the work instead.
+  if (!((map.getStyle() || {}).layers || []).length) return;
+  map.addSource('t', { type: 'geojson', data: tractData });
+  const under = labelAnchor();
+  // Lower than it was, because the basemap underneath has to show through. The
+  // outline carries the tract boundaries that the opacity no longer makes obvious.
+  map.addLayer({ id: 'fill', type: 'fill', source: 't',
+                 paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.72 } }, under);
+  map.addLayer({ id: 'line', type: 'line', source: 't',
+                 paint: { 'line-color': css('--hairline'), 'line-width': 0.6,
+                          'line-opacity': 0.7 } }, under);
+}
+
+// setStyle discards every layer added by hand, so the tract layers are put back
+// from here rather than only at boot.
+map.on('styledata', addTractLayers);
 
 function syncBasemap() {
-  const dark = isDark();
-  const vis = (id, on) => {
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-  };
-  vis('base-dark', dark);
-  vis('base-light', !dark);
-  vis('labels-dark', dark);
-  vis('labels-light', !dark);
+  const want = BASEMAP[isDark() ? 'dark' : 'light'];
+  if (want === styleUrl) return false;
+  styleUrl = want;
+  // diff false: these are two unrelated styles, so a diff is wasted work and
+  // has a habit of leaving orphans behind.
+  map.setStyle(want, { diff: false });
+  return true;
 }
 
 async function drawMap() {
   const gj = await fetch('/api/tracts').then(r => r.json());
-
-  for (const [id, style] of [['base-light', 'light_nolabels'], ['base-dark', 'dark_nolabels']]) {
-    map.addSource(id, { type: 'raster', tiles: CARTO(style), tileSize: 256,
-                        attribution: '&copy; OpenStreetMap contributors &copy; CARTO' });
-    map.addLayer({ id: id, type: 'raster', source: id,
-                   // Muted, so the city reads as context and the data reads as data.
-                   paint: { 'raster-opacity': 0.85, 'raster-saturation': -0.35 } });
-  }
-
-  map.addSource('t', { type: 'geojson', data: gj });
-  // Lower than it was, because the basemap underneath has to show through. The
-  // outline carries the tract boundaries that the opacity no longer makes obvious.
-  map.addLayer({ id: 'fill', type: 'fill', source: 't',
-                 paint: { 'fill-color': heatExpr(), 'fill-opacity': 0.72 } });
-  map.addLayer({ id: 'line', type: 'line', source: 't',
-                 paint: { 'line-color': css('--hairline'), 'line-width': 0.6,
-                          'line-opacity': 0.7 } });
-
-  // Above the choropleth on purpose: names the reader can use are the whole
-  // reason for adding a basemap.
-  for (const [id, style] of [['labels-light', 'light_only_labels'],
-                             ['labels-dark', 'dark_only_labels']]) {
-    map.addSource(id, { type: 'raster', tiles: CARTO(style), tileSize: 256 });
-    map.addLayer({ id: id, type: 'raster', source: id, paint: { 'raster-opacity': 0.95 } });
-  }
-  syncBasemap();
+  tractData = gj;
+  addTractLayers();
 
   // Frame the study area rather than trusting a hardcoded centre and zoom, which
   // left the tracts as a small blob in the middle of an empty rectangle.
@@ -1363,13 +1395,18 @@ revealOnScroll();
       drawRamp();
       drawCurve().catch(() => {});
       drawScatter().catch(() => {});
-      if (map.getLayer && map.getLayer('fill')) {
-        try {
+      try {
+        // If the basemap changed, setStyle drops the tract layers and the
+        // styledata handler rebuilds them with the new palette, so repainting
+        // here would be against layers that no longer exist. If it did not
+        // change, auto resolving to the same appearance, the layers survive and
+        // do need repainting.
+        const swapped = syncBasemap();
+        if (!swapped && map.getLayer('fill')) {
           map.setPaintProperty('fill', 'fill-color', heatExpr());
           map.setPaintProperty('line', 'line-color', css('--hairline'));
-          syncBasemap();
-        } catch (e) { /* map not ready */ }
-      }
+        }
+      } catch (e) { /* map not ready */ }
     });
   }
   btn.addEventListener('click', () => {

@@ -5,28 +5,54 @@ fine on localhost and not fine behind a public tunnel URL, which is where this
 gets shared with teammates and, in principle, with anyone who learns the address.
 
 So the agent endpoints carry two ceilings: a per-caller allowance so one person
-cannot loop a script, and a process-wide total so the worst case is bounded no
-matter how many callers appear. Both reset on restart, which is the right
-behaviour for a demo rather than a service.
+cannot loop a script, and an everyone-together budget so the worst case is
+bounded no matter how many callers appear.
+
+Both are rolling windows rather than lifetime counters. A lifetime counter was
+the first version and it is wrong for anything deployed: the site sits behind a
+real hostname for days, quietly burns through its budget, and then refuses every
+question until somebody notices and restarts it. A dead agent during judging
+looks exactly like a broken product. A rolling budget recovers on its own.
+
+Both limits read from the environment so the deployment can choose its own
+appetite without a code change.
 
 Deliberately in-process and dependency-free. A shared store would be the right
-answer for something long-lived; for a tunnel that exists for an afternoon it
-would be more moving parts than the problem deserves.
+answer for several instances behind a load balancer; there is one instance behind
+Caddy, so a shared store would be more moving parts than the problem deserves.
+The cost of that choice is that the budget resets on restart, which is the safe
+direction to be wrong in.
 """
 from __future__ import annotations
 
+import os
 import time
 from collections import defaultdict, deque
 
 # Per caller, in a rolling window.
-PER_IP = 25
-WINDOW_SECONDS = 3600
+PER_IP = int(os.getenv("RESPITE_LIMIT_PER_IP", "25"))
+WINDOW_SECONDS = int(os.getenv("RESPITE_LIMIT_WINDOW_SECONDS", "3600"))
 
-# Per process lifetime, across every caller. Restart to clear.
-TOTAL = 300
+# Everyone together, in a longer rolling window.
+TOTAL = int(os.getenv("RESPITE_LIMIT_TOTAL", "300"))
+TOTAL_WINDOW_SECONDS = int(os.getenv("RESPITE_LIMIT_TOTAL_WINDOW_SECONDS", "86400"))
+
+
+def _window_label(seconds: int) -> str:
+    """Human wording for the budget window, since it is configurable.
+
+    Integer hours read as "0 hours" for anything under an hour, which is the sort
+    of detail that makes a message look broken to the person it is aimed at.
+    """
+    if seconds >= 7200:
+        return f"{seconds // 3600} hours"
+    if seconds >= 3600:
+        return "hour"
+    minutes = max(1, seconds // 60)
+    return f"{minutes} minutes" if minutes > 1 else "minute"
 
 _hits: dict[str, deque[float]] = defaultdict(deque)
-_total = 0
+_all: deque[float] = deque()
 
 
 class RateLimited(Exception):
@@ -47,21 +73,28 @@ def caller(request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _expire(q: deque, now: float, window: float) -> None:
+    while q and now - q[0] > window:
+        q.popleft()
+
+
 def check(request) -> None:
     """Raise :class:`RateLimited` if this call should not be spent."""
-    global _total
+    now = time.time()
 
-    if _total >= TOTAL:
+    _expire(_all, now, TOTAL_WINDOW_SECONDS)
+    if len(_all) >= TOTAL:
+        wait = _window_label(int(TOTAL_WINDOW_SECONDS - (now - _all[0])))
         raise RateLimited(
-            f"This demo instance has answered its limit of {TOTAL} agent questions. "
-            "Every other part of the page still works. Restart the server to reset."
+            f"This instance has answered {TOTAL} agent questions in the last "
+            f"{_window_label(TOTAL_WINDOW_SECONDS)}, which is its budget. Some of it "
+            f"frees up again in about {wait}. Every measurement, the map and the charts "
+            "on this page are unaffected."
         )
 
     who = caller(request)
-    now = time.time()
     q = _hits[who]
-    while q and now - q[0] > WINDOW_SECONDS:
-        q.popleft()
+    _expire(q, now, WINDOW_SECONDS)
 
     if len(q) >= PER_IP:
         # The oldest hit is what has to age out, so it gives the wait. Guarded
@@ -75,13 +108,15 @@ def check(request) -> None:
         )
 
     q.append(now)
-    _total += 1
+    _all.append(now)
 
 
 def state() -> dict:
     """For /health, so the limit is visible without reading the code."""
+    _expire(_all, time.time(), TOTAL_WINDOW_SECONDS)
     return {
-        "agent_calls_used": _total,
+        "agent_calls_used": len(_all),
         "agent_calls_limit": TOTAL,
+        "agent_calls_window_hours": TOTAL_WINDOW_SECONDS // 3600,
         "per_caller_hourly_limit": PER_IP,
     }

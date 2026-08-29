@@ -1,5 +1,10 @@
 # 3-minute video: script and shot list
 
+A print version for whoever is recording is committed as
+[`Respite-video-script.pdf`](Respite-video-script.pdf), built by
+[`make_video_pdf.py`](make_video_pdf.py). The wording lives in both, so change them
+together or the PDF quietly goes stale.
+
 Every number below was read off the live site, not from notes. If a figure on screen disagrees
 with the script, the site is right and this file is stale.
 

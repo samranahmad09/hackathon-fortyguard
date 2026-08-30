@@ -26,6 +26,23 @@ Track 06, Agentic AI.
 
 Secondary tags: Track 04, Government and Environment.
 
+## Who this is for
+
+*The form asks who makes a decision differently because this exists. Answer the decision, not
+the persona.*
+
+A city heat officer or emergency manager deciding tonight where to send a finite number of
+welfare checks, and which cooling centres to keep open past the evening. That list is normally
+drawn from the social vulnerability index; because measured overnight exposure and that index
+turn out to be uncorrelated here, Respite puts 15 neighbourhoods and 52,091 people on it that
+the index does not surface.
+
+Do not phrase this as also dropping the 53 over-targeted tracts. It is symmetric and tempting,
+but it reads as withdrawing help from vulnerable people and it is not what the data says. Those
+places score high on vulnerability for real reasons; they are simply not the ones with no
+overnight recovery. The finding is that the index measures something else, not that it is
+wrong.
+
 ## Problem and user
 
 Heat response programmes are aimed using a social vulnerability index, on the assumption that

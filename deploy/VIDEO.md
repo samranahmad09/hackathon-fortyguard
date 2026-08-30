@@ -4,7 +4,7 @@
 
 Every number below was read off the live site. If a figure on screen disagrees with this script, the site is right and this file is stale.
 
-**Target 4:18.** The rules allow 3 to 5 minutes. This is 532 spoken words, 3:33 of speech at a normal pace, plus 45 seconds watching the agent work. That watching is not dead air: it is the part that proves the thing is real.
+**Target 2:32, against a hard three minute cap.** This is 331 spoken words, 2:12 of speech at a normal pace, plus 20 seconds watching the agent work. Even read slowly it comes in at 2:53, so there is real margin under the limit.
 
 **Recording notes.** The rules prefer a human speaking over the demo and explicitly disfavour AI narration and over-polished edits, so read this in your own voice and leave the small stumbles in. One take with a fluffed sentence beats four cuts. Screen record at 1920x1080, browser at default zoom, dark theme, window wide enough that the console and the three figures sit side by side.
 
@@ -19,43 +19,29 @@ The rubric is Impact and Relevance 40%, Technical Execution 35%, Innovation 15%,
 
 ---
 
-## 0:00 to 0:29  The stake
+## 0:00 to 0:20  The stake
 
 **On screen:** the page as it loads. The headline and the three figures.
 
-> “Somewhere in Phoenix tonight, someone in their seventies is lying awake in a bedroom that will not drop below twenty-eight degrees before dawn. No heatwave headline. Just a house that never cools.”
+> “Somewhere in Phoenix tonight, someone in their seventies is lying awake in a bedroom that will not drop below twenty-eight degrees before dawn.”
 
-> “On the night we measured, eighteen neighbourhoods never dropped below that line. Not once, midnight to six. Fifty-eight thousand people live in them.”
-
-> “No cool window, no recovery. That is why epidemiologists watch the overnight minimum, not the afternoon peak.”
+> “On the night we measured, eighteen neighbourhoods never dropped below that line. Midnight to six, not once. Fifty-eight thousand people live in them. No cool window, no recovery.”
 
 Do not say "urban heat island". Every other entry will.
 
-## 0:29 to 0:55  What we measured
+## 0:20 to 0:52  The finding
 
-**On screen:** scroll to the map. Let the streets and place names show. Hover one tract.
+**On screen:** scroll to the scatter chart. Let it sit a second. Point at the flat cloud of dots.
 
-> “Central Phoenix. A hundred and thirty-four neighbourhoods, from nearly forty-eight thousand readings a hundred metres apart, on the FortyGuard API.”
+> “Cities send heat help using a social vulnerability index, assuming the most vulnerable places are also the hottest. Nobody checks it.”
 
-> “Coolest block to hottest is three hours and forty minutes of difference in one night. By day the same city varies by a degree and a half. Uniform in the afternoon, not after dark.”
+> “Here is every tract, from forty-eight thousand readings a hundred metres apart. Vulnerability along the bottom, overnight heat up the side. If that assumption held, these dots would climb left to right.”
 
-> “And eighty-six percent of that variation is between neighbourhoods, not within them.”
-
-## 0:55 to 1:32  The finding
-
-**On screen:** scroll to the scatter chart. Let it sit a second before speaking. Point at the flat cloud of dots.
-
-> “Now the part that surprised us. Cities send heat help using a social vulnerability index, which assumes the most vulnerable places are also the hottest. Nobody checks it.”
-
-> “Here is every tract. Vulnerability along the bottom, overnight heat up the side. If that held, these dots would climb left to right.”
-
-> “The correlation is nought point nought nought four. No relationship at all, and we tried hard to break that result.”
-
-> “So fifteen neighbourhoods, fifty-two thousand people, six thousand over sixty-five, are severely exposed and outside the band a vulnerability-led programme targets.”
+> “The correlation is nought point nought nought four. So fifteen neighbourhoods, fifty-two thousand people, are severely exposed and sit outside the band a vulnerability-led programme targets.”
 
 **Pause.** This is the moment the judges either get it or do not.
 
-## 1:32 to 2:32  What a city does on Monday
+## 0:52 to 1:30  What a city does about it
 
 **On screen:** scroll up to the console and paste the question below.
 
@@ -63,15 +49,15 @@ Do not say "urban heat island". Every other entry will.
 What should the city actually do tonight, and in which neighbourhoods?
 ```
 
-Say the first line while the tool list appears. Then stop talking, let the answer land, and read its opening sentence off the screen.
+Say the first line while the tool list appears, then read the quoted line off the answer. Cut the waiting in the edit: showing the tools appear is enough.
 
-> “This is an agent, not a dashboard. Watch what it reads: the divergence, the tract list, the public health playbook, and its own limitations.”
+> “So I ask it what to do. Watch what it reads: the divergence, the tract list, the public health playbook, and its own limitations.”
 
-> “‘Put crews and overnight cooling access in the severely exposed tracts, not only the high-vulnerability ones. SVI alone is the wrong dispatch map.’”
+> “‘SVI alone is the wrong dispatch map.’”
 
-> “Most cooling centres close in the evening, before the risk period even begins. So the output is not a heat map. It is which neighbourhoods to keep one open in tonight, and where to send a finite number of welfare checks.”
+> “Most cooling centres close in the evening, before the risk period even begins. So the output is not a heat map. It is where to keep one open tonight, and where to send welfare checks.”
 
-## 2:32 to 3:35  What it refuses to do
+## 1:30 to 2:06  What it refuses to do
 
 **On screen:** paste the second question.
 
@@ -80,29 +66,25 @@ How many hours of relief would a cool-pavement programme buy in
 tract 1085.02? I need a number for a business case.
 ```
 
-Let the refusal render, then point at the list of sources underneath it.
+Let the refusal appear, then point at the list of sources under it.
 
-> “Here is the part I most want you to see. Reasonable question, and we cannot answer it. We sampled fifty tracts to test whether pavement and canopy explain overnight heat. Control for where a tract sits, and they do not.”
+> “Now the part I most want you to see. I ask for a cool-pavement effect size, for a business case.”
 
-> “So it refuses, even when you tell it you need a number for a business case.”
+> “We tested that. Control for where a tract sits, and surface composition does not explain overnight heat. So it refuses.”
 
-> “A model that invents a plausible figure under pressure is worse than no model, because someone will spend against it. Our limits are a tool the agent calls, not a line in a prompt, so they cannot be edited away. Sixteen tests, half written to bait exactly this. All sixteen passing.”
+> “A model that invents a plausible figure under pressure is worse than no model, because someone will spend against it. Sixteen tests, half written to bait exactly this. All passing.”
 
-## 3:35 to 4:04  Our own number is soft
+## 2:06 to 2:21  Our own number is soft
 
 **On screen:** open the disclosure titled "Why 18 tracts, and not 32".
 
-> “One last thing, and it is what I would want to know if I were judging this. Eighteen is the strictest possible reading. Some tracts dipped below the line for a tenth of a second. Allow a minute of relief to still count as none, and it is thirty-two.”
+> “And our own headline is softer than it looks. Eighteen is the strictest possible reading. Allow a minute of relief to still count as none and it is thirty-two. We published that rather than hiding it.”
 
-> “We found that in our own data, published it rather than hiding it, and the agent hands you the whole curve if you ask.”
-
-## 4:04 to 4:18  Close
+## 2:21 to 2:32  Close
 
 **On screen:** back to the top of the page.
 
-> “Respite. Which blocks never cool down, who sleeps in them, what to do about it tonight, and where it does not know.”
-
-> “Live now at respite dot samtechpk dot com. Ask it something hard.”
+> “Respite. Which blocks never cool down, who sleeps in them, what to do about it tonight, and where it does not know. Live at respite dot samtechpk dot com.”
 
 ---
 
@@ -112,20 +94,19 @@ Counted from the script text, not estimated. Speech assumes 150 words a minute.
 
 | Beat | Words | Speech | Watching | Ends at |
 |---|---|---|---|---|
-| The stake | 72 | 0:29 |  | 0:29 |
-| What we measured | 66 | 0:26 |  | 0:55 |
-| The finding | 92 | 0:37 |  | 1:32 |
-| What a city does on Monday | 88 | 0:35 | 0:25 | 2:32 |
-| What it refuses to do | 107 | 0:43 | 0:20 | 3:35 |
-| Our own number is soft | 73 | 0:29 |  | 4:04 |
-| Close | 34 | 0:14 |  | 4:18 |
-| **Total** | **532** | **3:33** | **0:45** | **4:18** |
+| The stake | 51 | 0:20 |  | 0:20 |
+| The finding | 79 | 0:32 |  | 0:52 |
+| What a city does about it | 66 | 0:26 | 0:12 | 1:30 |
+| What it refuses to do | 70 | 0:28 | 0:08 | 2:06 |
+| Our own number is soft | 36 | 0:14 |  | 2:21 |
+| Close | 29 | 0:12 |  | 2:32 |
+| **Total** | **331** | **2:12** | **0:20** | **2:32** |
 
-At a slow 130 words a minute this runs 4:51. At a brisk 170 it runs 3:53. Both are inside the three to five minute window, so pace is not something to worry about on the day.
+At a slow 130 words a minute this runs 2:53. At a brisk 170, 2:17. The cap is three minutes and the submission form is explicit about it, so the slow figure is the one that matters.
 
-**Running short?** Slow down rather than adding material. Most people read a script faster than they think, and the two waits while the agent works are easy to underestimate.
+**Running long is the only real risk.** The form rejects nothing else as firmly as an over-length video, so if a take comes out near three minutes, cut the waiting time around the two agent answers before cutting anything spoken.
 
-**Running long?** Cut the eighty-six percent line and the second half of the stake. Do not cut the refusal or the self-criticism: those are the two beats that separate this from every other entry.
+Do not cut the refusal or the self-criticism to save time. Those two beats are what separate this from every other entry, and they are already as short as they go.
 
 ## Numbers, verified against the live site
 

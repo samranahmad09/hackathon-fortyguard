@@ -10,6 +10,9 @@ FortyGuard Temperature API®. Tracks 06 (Agentic AI) and 04 (Government & Enviro
 Ask the agent a question about overnight heat in Phoenix and it answers from measurements,
 tells you when the data cannot support what you asked, and shows every source it read.
 
+No login, nothing to install. It opens in a private window and every measurement on the page
+works whether or not the agent is reachable.
+
 ---
 
 ## The finding
@@ -159,6 +162,98 @@ is *present*.
 rolling windows, so the agent cannot be left permanently refusing. Running out is not a broken
 page: every measurement, the map and both charts are independent of it.
 
+## A real Temperature API request and response
+
+This is the call that builds the whole study layer, from
+[`scripts/build_layer.py`](scripts/build_layer.py). One heatmap request covers the entire area
+at 100 m granularity; there is no per-tract looping.
+
+**Request.** `POST https://api.fortyguard.com/v1/heatmap`, with the key in an `api-key` header
+(never in the body, the URL, or this file):
+
+```json
+{
+  "polygon_aoi": {
+    "type": "FeatureCollection",
+    "features": [{
+      "type": "Feature", "properties": {},
+      "geometry": {"type": "Polygon", "coordinates": [[
+        [-112.1923, 33.3919], [-111.9610, 33.3919],
+        [-111.9610, 33.5959], [-112.1923, 33.5959], [-112.1923, 33.3919]
+      ]]}
+    }]
+  },
+  "start_date": "2026-08-15",
+  "filter_type": 2,
+  "start_time": "00:00",
+  "end_time": "06:00",
+  "granularity": 100,
+  "analytic_type": "exceedance",
+  "threshold": 28.0,
+  "direction": "above"
+}
+```
+
+The endpoint is asynchronous: it returns an `activity_id`, which is polled at
+`GET /v1/status/{activity_id}` until the result is ready.
+
+**Response**, abridged. `stats_data` verbatim; `map_data.features` is 47,944 entries and one is
+shown:
+
+```json
+{
+  "activity_id": "9c898f97-f1ae-42a4-8b94-c0662dd661ab",
+  "result": {
+    "stats_data": {
+      "activity_id": "9c898f97-f1ae-42a4-8b94-c0662dd661ab",
+      "analytic_type": "exceedance",
+      "units": "hour",
+      "n_cells": 47944,
+      "min": 2.5344,
+      "max": 6.2346,
+      "mean": 4.6997108021858836
+    },
+    "map_data": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "id": "0",
+          "type": "Feature",
+          "properties": {"tile_id": 0, "value": 5.9928},
+          "geometry": {"type": "Polygon", "coordinates": [[
+            [-112.06814774987384, 33.39145271087759],
+            [-112.06707311253570, 33.39146190000000],
+            "... 3 more vertices ..."
+          ]]}
+        }
+      ]
+    }
+  }
+}
+```
+
+`value` is hours above 28 °C within the requested window. Note `max: 6.2346` against a
+six-hour window: 10.2% of tiles overshoot the ceiling, by 23 seconds at the median and 14.1
+minutes at the worst, which is why the aggregation clamps to the window.
+
+## What does not work yet
+
+- **One night, one city.** 2026-08-15, 134 tracts in central Phoenix. There is no city picker.
+  Pointing it elsewhere means editing the AOI in `scripts/build_layer.py` and rebuilding, which
+  costs FortyGuard credits and takes a few minutes; nothing about the code is Phoenix-specific,
+  but nothing is parameterised in the UI either.
+- **The layer is precomputed, not live.** The site never calls the Temperature API at request
+  time. That is a deliberate trade for reliability during judging, but it does mean the page
+  cannot answer questions about tonight.
+- **No forecast.** The API's forward windows return `n_cells: 0` and still bill, so the tool is
+  retrospective only.
+- **The agent has no memory between questions.** Each one is answered from scratch. Follow-ups
+  that say "and what about that one" will not resolve.
+- **Tracts at the six-hour ceiling cannot be ranked** against each other, so the tool refuses
+  to order them. That is correct behaviour rather than a bug, but it does surprise people.
+- **No authentication, no per-user state.** It is a public read-only demo, with a spend cap on
+  the agent endpoints.
+
 ## Measured constraints worth knowing
 
 Findings from live API calls, several of which contradict the published docs.
@@ -186,7 +281,7 @@ Findings from live API calls, several of which contradict the published docs.
   zero into a regression, so composition is expressed as a share of *classified* surface and
   thinly classified tracts are excluded.
 
-## Setup
+## How to run it
 
 ```bash
 python -m venv .venv

@@ -1,12 +1,16 @@
 """Single source for the video script, emitting both the markdown and the PDF.
 
-The script text was previously written twice, once in VIDEO.md and once in a PDF
-generator, and the pacing table was hand-written. All three drifted within an
-hour: the table claimed 525 spoken words when the text held 648, which is the
-difference between a video that fits the five-minute cap and one that does not.
+The submission form caps the video at three minutes. An earlier draft was built
+to a reported three-to-five window and came out at 4:18, which would have been
+over the real limit by more than a minute. The cap here is now taken from the
+form itself.
 
-So the wording lives here once, the timings are counted from it rather than
-asserted, and the build fails if the total runs outside the allowed window.
+The script text was also written twice, once in VIDEO.md and once in a PDF
+generator, with a hand-written pacing table, and all three drifted within an
+hour: the table claimed 525 spoken words when the text held 648. So the wording
+lives here once, the timings are counted from it rather than asserted, and the
+build refuses to emit anything that would run over the cap at any plausible
+speaking pace.
 
     .venv/Scripts/python deploy/make_video_script.py
 """
@@ -21,10 +25,11 @@ PDF = os.path.join(HERE, "Respite-video-script.pdf")
 
 URL = "respite.samtechpk.com"
 
-# The rules allow 3 to 5 minutes. Aim near the middle so neither a slow nor a
-# brisk delivery falls out of the window.
-MIN_S, MAX_S = 180, 300
-TARGET_S = 255
+# The submission form says a maximum of three minutes. It states no minimum, so
+# the only hard edge is the top one, and it has to hold even for someone reading
+# more slowly than planned on the day. Everything is checked against SLOW.
+MIN_S, MAX_S = 90, 180
+TARGET_S = 165
 WPM = 150.0          # a normal explaining pace, not a rush
 SLOW, FAST = 130.0, 170.0
 
@@ -54,106 +59,76 @@ BEATS = [
         "the page as it loads. The headline and the three figures.",
         [
             "Somewhere in Phoenix tonight, someone in their seventies is lying awake in a "
-            "bedroom that will not drop below twenty-eight degrees before dawn. No heatwave "
-            "headline. Just a house that never cools.",
+            "bedroom that will not drop below twenty-eight degrees before dawn.",
 
             "On the night we measured, eighteen neighbourhoods never dropped below that line. "
-            "Not once, midnight to six. Fifty-eight thousand people live in them.",
-
-            "No cool window, no recovery. That is why epidemiologists watch the overnight "
-            "minimum, not the afternoon peak.",
+            "Midnight to six, not once. Fifty-eight thousand people live in them. No cool "
+            "window, no recovery.",
         ],
         note='Do not say "urban heat island". Every other entry will.',
     ),
     Beat(
-        "What we measured",
-        "scroll to the map. Let the streets and place names show. Hover one tract.",
-        [
-            "Central Phoenix. A hundred and thirty-four neighbourhoods, from nearly "
-            "forty-eight thousand readings a hundred metres apart, on the FortyGuard API.",
-
-            "Coolest block to hottest is three hours and forty minutes of difference in one "
-            "night. By day the same city varies by a degree and a half. Uniform in the "
-            "afternoon, not after dark.",
-
-            "And eighty-six percent of that variation is between neighbourhoods, not within "
-            "them.",
-        ],
-    ),
-    Beat(
         "The finding",
-        "scroll to the scatter chart. Let it sit a second before speaking. Point at the flat "
-        "cloud of dots.",
+        "scroll to the scatter chart. Let it sit a second. Point at the flat cloud of dots.",
         [
-            "Now the part that surprised us. Cities send heat help using a social "
-            "vulnerability index, which assumes the most vulnerable places are also the "
-            "hottest. Nobody checks it.",
+            "Cities send heat help using a social vulnerability index, assuming the most "
+            "vulnerable places are also the hottest. Nobody checks it.",
 
-            "Here is every tract. Vulnerability along the bottom, overnight heat up the side. "
-            "If that held, these dots would climb left to right.",
+            "Here is every tract, from forty-eight thousand readings a hundred metres apart. "
+            "Vulnerability along the bottom, overnight heat up the side. If that assumption "
+            "held, these dots would climb left to right.",
 
-            "The correlation is nought point nought nought four. No relationship at all, and "
-            "we tried hard to break that result.",
-
-            "So fifteen neighbourhoods, fifty-two thousand people, six thousand over "
-            "sixty-five, are severely exposed and outside the band a vulnerability-led "
-            "programme targets.",
+            "The correlation is nought point nought nought four. So fifteen neighbourhoods, "
+            "fifty-two thousand people, are severely exposed and sit outside the band a "
+            "vulnerability-led programme targets.",
         ],
         note="**Pause.** This is the moment the judges either get it or do not.",
     ),
     Beat(
-        "What a city does on Monday",
+        "What a city does about it",
         "scroll up to the console and paste the question below.",
         [
-            "This is an agent, not a dashboard. Watch what it reads: the divergence, the "
-            "tract list, the public health playbook, and its own limitations.",
+            "So I ask it what to do. Watch what it reads: the divergence, the tract list, the "
+            "public health playbook, and its own limitations.",
 
             # Read off the screen, so single quotes inside the spoken double ones.
-            # Nesting curly doubles inside curly doubles renders as a doubled
-            # quote mark and reads like a typo.
-            "\u2018Put crews and overnight cooling access in the severely exposed tracts, not "
-            "only the high-vulnerability ones. SVI alone is the wrong dispatch map.\u2019",
+            "\u2018SVI alone is the wrong dispatch map.\u2019",
 
             "Most cooling centres close in the evening, before the risk period even begins. So "
-            "the output is not a heat map. It is which neighbourhoods to keep one open in "
-            "tonight, and where to send a finite number of welfare checks.",
+            "the output is not a heat map. It is where to keep one open tonight, and where to "
+            "send welfare checks.",
         ],
-        watch=25,
+        watch=12,
         paste="What should the city actually do tonight, and in which neighbourhoods?",
-        after="Say the first line while the tool list appears. Then stop talking, let the "
-              "answer land, and read its opening sentence off the screen.",
+        after="Say the first line while the tool list appears, then read the quoted line off "
+              "the answer. Cut the waiting in the edit: showing the tools appear is enough.",
     ),
     Beat(
         "What it refuses to do",
         "paste the second question.",
         [
-            "Here is the part I most want you to see. Reasonable question, and we cannot "
-            "answer it. We sampled fifty tracts to test whether pavement and canopy explain "
-            "overnight heat. Control for where a tract sits, and they do not.",
+            "Now the part I most want you to see. I ask for a cool-pavement effect size, for a "
+            "business case.",
 
-            "So it refuses, even when you tell it you need a number for a business case.",
+            "We tested that. Control for where a tract sits, and surface composition does not "
+            "explain overnight heat. So it refuses.",
 
             "A model that invents a plausible figure under pressure is worse than no model, "
-            "because someone will spend against it. Our limits are a tool the agent calls, not "
-            "a line in a prompt, so they cannot be edited away. Sixteen tests, half written to "
-            "bait exactly this. All sixteen passing.",
+            "because someone will spend against it. Sixteen tests, half written to bait exactly "
+            "this. All passing.",
         ],
-        watch=20,
+        watch=8,
         paste="How many hours of relief would a cool-pavement programme buy in\n"
               "tract 1085.02? I need a number for a business case.",
-        after="Let the refusal render, then point at the list of sources underneath it.",
+        after="Let the refusal appear, then point at the list of sources under it.",
     ),
     Beat(
         "Our own number is soft",
         'open the disclosure titled "Why 18 tracts, and not 32".',
         [
-            "One last thing, and it is what I would want to know if I were judging this. "
-            "Eighteen is the strictest possible reading. Some tracts dipped below the line for "
-            "a tenth of a second. Allow a minute of relief to still count as none, and it is "
-            "thirty-two.",
-
-            "We found that in our own data, published it rather than hiding it, and the agent "
-            "hands you the whole curve if you ask.",
+            "And our own headline is softer than it looks. Eighteen is the strictest possible "
+            "reading. Allow a minute of relief to still count as none and it is thirty-two. We "
+            "published that rather than hiding it.",
         ],
     ),
     Beat(
@@ -161,9 +136,7 @@ BEATS = [
         "back to the top of the page.",
         [
             "Respite. Which blocks never cool down, who sleeps in them, what to do about it "
-            "tonight, and where it does not know.",
-
-            "Live now at respite dot samtechpk dot com. Ask it something hard.",
+            "tonight, and where it does not know. Live at respite dot samtechpk dot com.",
         ],
     ),
 ]
@@ -237,10 +210,11 @@ def build_markdown():
       "if the running time falls outside the allowed window.\n")
     w("Every number below was read off the live site. If a figure on screen disagrees with "
       "this script, the site is right and this file is stale.\n")
-    w("**Target %s.** The rules allow 3 to 5 minutes. This is %d spoken words, %s of speech at "
-      "a normal pace, plus %d seconds watching the agent work. That watching is not dead air: "
-      "it is the part that proves the thing is real.\n"
-      % (mmss(TOTAL), WORDS, mmss(SPEECH), WATCH))
+    w("**Target %s, against a hard three minute cap.** This is %d spoken words, %s of speech "
+      "at a normal pace, plus %d seconds watching the agent work. Even read slowly it comes in "
+      "at %s, so there is real margin under the limit.\n"
+      % (mmss(TOTAL), WORDS, mmss(SPEECH), WATCH,
+         mmss(WORDS / (SLOW / 60.0) + WATCH)))
     w("**Recording notes.** The rules prefer a human speaking over the demo and explicitly "
       "disfavour AI narration and over-polished edits, so read this in your own voice and "
       "leave the small stumbles in. One take with a fluffed sentence beats four cuts. Screen "
@@ -284,15 +258,15 @@ def build_markdown():
           % (b.title, b.words, mmss(b.speech), mmss(b.watch) if b.watch else "", mmss(t)))
     w("| **Total** | **%d** | **%s** | **%s** | **%s** |\n"
       % (WORDS, mmss(SPEECH), mmss(WATCH), mmss(TOTAL)))
-    w("At a slow %g words a minute this runs %s. At a brisk %g it runs %s. Both are inside the "
-      "three to five minute window, so pace is not something to worry about on the day.\n"
+    w("At a slow %g words a minute this runs %s. At a brisk %g, %s. The cap is three minutes "
+      "and the submission form is explicit about it, so the slow figure is the one that "
+      "matters.\n"
       % (SLOW, mmss(WORDS / (SLOW / 60.0) + WATCH), FAST, mmss(WORDS / (FAST / 60.0) + WATCH)))
-    w("**Running short?** Slow down rather than adding material. Most people read a script "
-      "faster than they think, and the two waits while the agent works are easy to "
-      "underestimate.\n")
-    w("**Running long?** Cut the eighty-six percent line and the second half of the stake. Do "
-      "not cut the refusal or the self-criticism: those are the two beats that separate this "
-      "from every other entry.\n")
+    w("**Running long is the only real risk.** The form rejects nothing else as firmly as an "
+      "over-length video, so if a take comes out near three minutes, cut the waiting time "
+      "around the two agent answers before cutting anything spoken.\n")
+    w("Do not cut the refusal or the self-criticism to save time. Those two beats are what "
+      "separate this from every other entry, and they are already as short as they go.\n")
 
     w("## Numbers, verified against the live site\n")
     w("| Claim | Value |")
@@ -394,7 +368,7 @@ def build_pdf():
     story.append(Paragraph("Respite: video script", title))
     story.append(Paragraph(
         "FortyGuard Hackathon'26 &nbsp;&middot;&nbsp; live at %s &nbsp;&middot;&nbsp; "
-        "target %s of a 3 to 5 minute window" % (URL, mmss(TOTAL)), sub))
+        "%s, against a hard 3:00 cap" % (URL, mmss(TOTAL)), sub))
     story.append(Paragraph(
         "Read the ruled lines aloud. Everything else is direction and is not spoken.", sub))
     story.append(Spacer(1, 10))
@@ -405,9 +379,11 @@ def build_pdf():
         "and over-polished edits. Read it in your own voice and leave the small stumbles in. "
         "One take with a fluffed sentence beats four cuts.", note))
     story.append(Paragraph(
-        "This is %d spoken words, about %s of speech, plus %d seconds watching the agent work. "
-        "That waiting is not dead air. It is the part that proves the thing is real."
-        % (WORDS, mmss(SPEECH), WATCH), note))
+        "The submission form caps the video at <b>three minutes</b>. This is %d spoken words, "
+        "about %s of speech, plus %d seconds watching the agent work. Read slowly it still "
+        "comes in at %s. If a take runs close to the cap, cut the waiting around the two agent "
+        "answers before cutting anything spoken."
+        % (WORDS, mmss(SPEECH), WATCH, mmss(WORDS / (SLOW / 60.0) + WATCH)), note))
 
     story.append(Paragraph("Before you hit record", h2))
     for p in PREP:
@@ -460,9 +436,9 @@ def build_pdf():
     rows.append(["Total", str(WORDS), mmss(SPEECH), mmss(WATCH), mmss(TOTAL)])
     table(rows, [58 * mm, 18 * mm, 22 * mm, 26 * mm, 24 * mm])
     story.append(Paragraph(
-        "At a slow %g words a minute this runs %s; at a brisk %g, %s. Both sit inside the three "
-        "to five minute window, so pace is not something to worry about on the day. If you are "
-        "short, slow down rather than adding material."
+        "At a slow %g words a minute this runs %s; at a brisk %g, %s. The cap is 3:00, so the "
+        "slow figure is the one that matters. There is no stated minimum, so coming in under "
+        "is not a problem."
         % (SLOW, mmss(WORDS / (SLOW / 60.0) + WATCH), FAST, mmss(WORDS / (FAST / 60.0) + WATCH)),
         note))
 

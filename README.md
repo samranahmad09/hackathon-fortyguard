@@ -13,6 +13,12 @@ tells you when the data cannot support what you asked, and shows every source it
 No login, nothing to install. It opens in a private window and every measurement on the page
 works whether or not the agent is reachable.
 
+**Provenance.** This repository is a fork of FortyGuard's own
+[temperature-api-quickstart](https://github.com/FortyGuard-Tech/temperature-api-quickstart), so
+its history contains FortyGuard's commits from April and May 2026. That inherited boilerplate
+is the `fortyguard/` client package and `notebooks/00`-`05`, MIT licensed, listed under
+[Attribution](#attribution). Everything of ours begins on 21 August 2026, after the kickoff.
+
 ---
 
 ## The finding
